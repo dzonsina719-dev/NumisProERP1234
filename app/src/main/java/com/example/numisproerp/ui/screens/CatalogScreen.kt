@@ -54,30 +54,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.numisproerp.NumisProERPApplication
-import com.numisproerp.data.database.AppDatabase
 import com.numisproerp.data.entities.CatalogItem
-import com.numisproerp.data.repository.CatalogRepository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.viewmodel.CatalogViewModel
-import com.numisproerp.ui.viewmodel.CatalogViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(navController: NavHostController) {
+fun CatalogScreen(
+    navController: NavHostController,
+    viewModel: CatalogViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
-    val database = NumisProERPApplication.getInstance().database
-    val repository = CatalogRepository(database.catalogDao())
-    val viewModel: CatalogViewModel = viewModel(
-        factory = CatalogViewModelFactory(repository)
-    )
     val uiState by viewModel.uiState.collectAsState()
 
     var showDetailDialog by remember { mutableStateOf(false) }

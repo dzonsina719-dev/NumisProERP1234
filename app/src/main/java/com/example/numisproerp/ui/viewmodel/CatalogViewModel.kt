@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.numisproerp.data.entities.CatalogItem
 import com.numisproerp.data.repository.CatalogRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,8 @@ data class CatalogUiState(
     val isDataLoaded: Boolean = false
 )
 
-class CatalogViewModel(
+@HiltViewModel
+class CatalogViewModel @Inject constructor(
     private val repository: CatalogRepository
 ) : ViewModel() {
 

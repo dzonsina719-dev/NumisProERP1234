@@ -20,6 +20,8 @@ import com.numisproerp.data.entities.Supplier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
 data class TransactionSummary(
     val id: String,
@@ -30,7 +32,8 @@ data class TransactionSummary(
     val counterpartyName: String
 )
 
-class Repository(
+@Singleton
+class Repository @Inject constructor(
     private val database: AppDatabase
 ) {
 

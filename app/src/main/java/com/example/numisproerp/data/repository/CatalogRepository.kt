@@ -8,8 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.InputStream
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CatalogRepository(
+@Singleton
+class CatalogRepository @Inject constructor(
     private val catalogDao: CatalogDao
 ) {
 

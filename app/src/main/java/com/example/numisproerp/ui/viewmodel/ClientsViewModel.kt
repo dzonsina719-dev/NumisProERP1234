@@ -6,6 +6,8 @@ import com.numisproerp.data.dao.ClientWithBalance
 import com.numisproerp.data.dao.SaleWithProductName
 import com.numisproerp.data.entities.Client
 import com.numisproerp.data.repository.Repository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,8 @@ data class ClientsUiState(
     val errorMessage: String = ""
 )
 
-class ClientsViewModel(
+@HiltViewModel
+class ClientsViewModel @Inject constructor(
     val repository: Repository
 ) : ViewModel() {
 

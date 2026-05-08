@@ -58,13 +58,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
 import com.numisproerp.data.dao.PurchaseWithProductName
 import com.numisproerp.data.dao.SupplierWithBalance
 import com.numisproerp.data.entities.Supplier
-import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
@@ -72,7 +70,6 @@ import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.SuppliersViewModel
-import com.numisproerp.ui.viewmodel.SuppliersViewModelFactory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -80,14 +77,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SuppliersScreen(navController: NavHostController) {
+fun SuppliersScreen(
+    navController: NavHostController,
+    viewModel: SuppliersViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val viewModel: SuppliersViewModel = viewModel(
-        factory = SuppliersViewModelFactory(
-            Repository(NumisProERPApplication.getInstance().database)
-        )
-    )
     val uiState by viewModel.uiState.collectAsState()
 
     var showDetailDialog by remember { mutableStateOf(false) }

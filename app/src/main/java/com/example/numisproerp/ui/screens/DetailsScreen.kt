@@ -38,8 +38,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
 import com.numisproerp.data.database.AppDatabase
+import com.numisproerp.di.AppDatabaseEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import com.numisproerp.data.entities.Purchase
 import com.numisproerp.data.entities.Sale
 import com.numisproerp.data.entities.Supplier
@@ -61,7 +62,12 @@ fun DetailsScreen(
     type: String,
     title: String
 ) {
-    val database = NumisProERPApplication.getInstance().database
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val database: AppDatabase = remember {
+        EntryPointAccessors
+            .fromApplication(context, AppDatabaseEntryPoint::class.java)
+            .appDatabase()
+    }
     var isLoading by remember { mutableStateOf(true) }
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }

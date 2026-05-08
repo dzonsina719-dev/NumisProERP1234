@@ -43,26 +43,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
-import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.ExpensesViewModel
-import com.numisproerp.ui.viewmodel.ExpensesViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpensesScreen(navController: NavHostController) {
-    val viewModel: ExpensesViewModel = viewModel(
-        factory = ExpensesViewModelFactory(
-            Repository(NumisProERPApplication.getInstance().database)
-        )
-    )
+fun ExpensesScreen(
+    navController: NavHostController,
+    viewModel: ExpensesViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {

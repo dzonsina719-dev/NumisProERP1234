@@ -41,10 +41,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
-import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.navigation.Screen
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
@@ -53,7 +51,6 @@ import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.DashboardViewModel
-import com.numisproerp.ui.viewmodel.DashboardViewModelFactory
 import com.numisproerp.ui.viewmodel.DashboardData
 import com.numisproerp.ui.viewmodel.RecentTransaction
 import java.text.SimpleDateFormat
@@ -63,11 +60,7 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
-    viewModel: DashboardViewModel = viewModel(
-        factory = DashboardViewModelFactory(
-            Repository(NumisProERPApplication.getInstance().database)
-        )
-    )
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val dashboardData by viewModel.dashboardData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

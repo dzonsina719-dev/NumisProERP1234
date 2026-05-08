@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +35,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
+import com.numisproerp.data.database.AppDatabase
+import com.numisproerp.di.AppDatabaseEntryPoint
 import com.numisproerp.ui.theme.IOSDesign
+import dagger.hilt.android.EntryPointAccessors
 import com.numisproerp.utils.ExcelExporter
 import com.numisproerp.utils.ExcelImporter
 import kotlinx.coroutines.launch
@@ -45,7 +48,11 @@ import kotlinx.coroutines.launch
 fun DocumentsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val database = NumisProERPApplication.getInstance().database
+    val database: AppDatabase = remember {
+        EntryPointAccessors
+            .fromApplication(context.applicationContext, AppDatabaseEntryPoint::class.java)
+            .appDatabase()
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

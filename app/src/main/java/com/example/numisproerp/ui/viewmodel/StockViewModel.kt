@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.numisproerp.data.dao.ProductWithStock
 import com.numisproerp.data.repository.Repository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,8 @@ data class StockUiState(
     val showAddProductDialog: Boolean = false
 )
 
-class StockViewModel(
+@HiltViewModel
+class StockViewModel @Inject constructor(
     private val repository: Repository
 ) : ViewModel() {
 

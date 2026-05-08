@@ -6,6 +6,8 @@ import com.numisproerp.data.dao.PurchaseWithProductName
 import com.numisproerp.data.dao.SupplierWithBalance
 import com.numisproerp.data.entities.Supplier
 import com.numisproerp.data.repository.Repository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,8 @@ data class SuppliersUiState(
     val showAddDialog: Boolean = false
 )
 
-class SuppliersViewModel(
+@HiltViewModel
+class SuppliersViewModel @Inject constructor(
     val repository: Repository
 ) : ViewModel() {
 

@@ -41,10 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
-import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
@@ -52,16 +50,13 @@ import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.StockViewModel
-import com.numisproerp.ui.viewmodel.StockViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StockScreen(navController: NavHostController) {
-    val viewModel: StockViewModel = viewModel(
-        factory = StockViewModelFactory(
-            Repository(NumisProERPApplication.getInstance().database)
-        )
-    )
+fun StockScreen(
+    navController: NavHostController,
+    viewModel: StockViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {

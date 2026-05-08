@@ -52,20 +52,17 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.numisproerp.NumisProERPApplication
 import com.numisproerp.data.dao.ClientForSelection
 import com.numisproerp.data.dao.ProductInStock
 import com.numisproerp.data.entities.Client
 import com.numisproerp.data.entities.Sale
-import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.viewmodel.SaleViewModel
-import com.numisproerp.ui.viewmodel.SaleViewModelFactory
 import kotlinx.coroutines.launch
 
 data class SaleCartItem(
@@ -80,16 +77,13 @@ data class SaleCartItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SaleScreen(navController: NavHostController) {
+fun SaleScreen(
+    navController: NavHostController,
+    viewModel: SaleViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
-
-    val viewModel: SaleViewModel = viewModel(
-        factory = SaleViewModelFactory(
-            Repository(NumisProERPApplication.getInstance().database)
-        )
-    )
     val uiState by viewModel.uiState.collectAsState()
 
     var cartItems by remember { mutableStateOf<List<SaleCartItem>>(emptyList()) }
