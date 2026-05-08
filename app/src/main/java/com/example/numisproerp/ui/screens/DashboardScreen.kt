@@ -50,6 +50,8 @@ import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
+import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.DashboardViewModel
 import com.numisproerp.ui.viewmodel.DashboardViewModelFactory
 import com.numisproerp.ui.viewmodel.DashboardData
@@ -220,7 +222,8 @@ fun StatsCardClickable(
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
@@ -252,29 +255,20 @@ fun MonthlyStatCardClickable(
 ) {
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            IOSIconChip(
+                icon = icon,
+                tint = iconColor
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
@@ -384,20 +378,15 @@ fun QuickAccessButton(
             .clickable { onClick() }
             .padding(8.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-        }
+        IOSIconChip(
+            icon = icon,
+            tint = MaterialTheme.colorScheme.primary,
+            chipSize = IOSDesign.IconChipLarge,
+            iconSize = IOSDesign.IconSizeLarge,
+            cornerRadius = 16.dp,
+            backgroundAlpha = 0.12f,
+            contentDescription = label
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = label,
@@ -415,8 +404,9 @@ fun RecentTransactionItem(transaction: RecentTransaction) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
@@ -424,20 +414,10 @@ fun RecentTransactionItem(transaction: RecentTransaction) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isPurchase) AccentOrange.copy(alpha = 0.15f) else AccentGreen.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isPurchase) Icons.Outlined.LocalAtm else Icons.Filled.ShoppingCart,
-                    contentDescription = null,
-                    tint = if (isPurchase) AccentOrange else AccentGreen,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            IOSIconChip(
+                icon = if (isPurchase) Icons.Outlined.LocalAtm else Icons.Filled.ShoppingCart,
+                tint = if (isPurchase) AccentOrange else AccentGreen
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f)

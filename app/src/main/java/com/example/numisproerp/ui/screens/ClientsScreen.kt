@@ -69,6 +69,8 @@ import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
+import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.ClientsViewModel
 import com.numisproerp.ui.viewmodel.ClientsViewModelFactory
 import kotlinx.coroutines.launch
@@ -166,7 +168,7 @@ fun ClientsScreen(navController: NavHostController) {
                             }
                         }
                     },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                 )
 
                 // Кнопка додати поруч з пошуком
@@ -258,35 +260,35 @@ fun ClientsScreen(navController: NavHostController) {
                             onValueChange = { editName = it },
                             label = { Text("ПІБ / Нікнейм *") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         )
                         OutlinedTextField(
                             value = editPhone,
                             onValueChange = { editPhone = it },
                             label = { Text("Телефон") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         )
                         OutlinedTextField(
                             value = editTelegram,
                             onValueChange = { editTelegram = it },
                             label = { Text("Telegram / Viber") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         )
                         OutlinedTextField(
                             value = editCity,
                             onValueChange = { editCity = it },
                             label = { Text("Місто") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         )
                         OutlinedTextField(
                             value = editNotes,
                             onValueChange = { editNotes = it },
                             label = { Text("Нотатки") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         )
                     } else {
                         Card(
@@ -294,7 +296,7 @@ fun ClientsScreen(navController: NavHostController) {
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
@@ -343,7 +345,7 @@ fun ClientsScreen(navController: NavHostController) {
                                 colors = CardDefaults.cardColors(
                                     containerColor = AccentGreen.copy(alpha = 0.1f)
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp),
@@ -371,7 +373,7 @@ fun ClientsScreen(navController: NavHostController) {
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                             ) {
                                 Text(
                                     text = "Немає історії покупок",
@@ -520,21 +522,21 @@ fun ClientsScreen(navController: NavHostController) {
                         onValueChange = { name = it },
                         label = { Text("ПІБ / Нікнейм *") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
                         label = { Text("Телефон") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
                     OutlinedTextField(
                         value = telegram,
                         onValueChange = { telegram = it },
                         label = { Text("Telegram / Viber") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
                         placeholder = { Text("@username") }
                     )
                     OutlinedTextField(
@@ -542,14 +544,14 @@ fun ClientsScreen(navController: NavHostController) {
                         onValueChange = { city = it },
                         label = { Text("Місто") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
                         label = { Text("Нотатки") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
 
                     Button(
@@ -585,8 +587,9 @@ fun ClientCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Column(
             modifier = Modifier
@@ -600,20 +603,10 @@ fun ClientCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AccentBlue.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            tint = AccentBlue,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                    IOSIconChip(
+                        icon = Icons.Default.Person,
+                        tint = AccentBlue
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
@@ -715,7 +708,7 @@ fun SaleHistoryItem(sale: SaleWithProductName) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadiusSmall),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )

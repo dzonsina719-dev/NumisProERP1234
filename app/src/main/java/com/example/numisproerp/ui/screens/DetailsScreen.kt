@@ -46,6 +46,8 @@ import com.numisproerp.data.entities.Supplier
 import com.numisproerp.data.entities.Client
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
+import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.theme.IOSIconChip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -158,7 +160,7 @@ fun DetailsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                 ) {
                     Row(
                         modifier = Modifier
@@ -233,28 +235,20 @@ fun TransactionDetailItem(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isPurchase) AccentOrange.copy(alpha = 0.1f) else AccentGreen.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isPurchase) Icons.Outlined.LocalAtm else Icons.Outlined.ShoppingCart,
-                    contentDescription = null,
-                    tint = if (isPurchase) AccentOrange else AccentGreen
-                )
-            }
+            IOSIconChip(
+                icon = if (isPurchase) Icons.Outlined.LocalAtm else Icons.Outlined.ShoppingCart,
+                tint = if (isPurchase) AccentOrange else AccentGreen
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f)

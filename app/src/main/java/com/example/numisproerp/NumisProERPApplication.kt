@@ -26,14 +26,12 @@ class NumisProERPApplication : Application() {
         super.onCreate()
         instance = this
 
-        // Ініціалізація бази даних Room
         database = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
             "numisproerp_database"
         )
             .fallbackToDestructiveMigration()
-            .allowMainThreadQueries()
             .build()
     }
 }

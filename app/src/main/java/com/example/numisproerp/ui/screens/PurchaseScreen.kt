@@ -63,6 +63,7 @@ import com.numisproerp.data.entities.Supplier
 import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
+import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.viewmodel.PurchaseViewModel
 import com.numisproerp.ui.viewmodel.PurchaseViewModelFactory
 import kotlinx.coroutines.launch
@@ -207,7 +208,7 @@ fun PurchaseScreen(navController: NavHostController) {
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                     ) {
                         Text(
                             text = "Кошик порожній. Додайте товари",
@@ -236,7 +237,7 @@ fun PurchaseScreen(navController: NavHostController) {
                     colors = CardDefaults.cardColors(
                         containerColor = AccentOrange.copy(alpha = 0.1f)
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                 ) {
                     Row(
                         modifier = Modifier
@@ -285,7 +286,7 @@ fun PurchaseScreen(navController: NavHostController) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
                     enabled = cartItems.isNotEmpty() && uiState.selectedSupplierId.isNotEmpty()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)

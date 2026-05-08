@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,6 +65,7 @@ import com.numisproerp.data.repository.CatalogRepository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
+import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.viewmodel.CatalogViewModel
 import com.numisproerp.ui.viewmodel.CatalogViewModelFactory
 
@@ -154,27 +153,13 @@ fun CatalogScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Кнопка "Каталог НБУ" - завантаження Excel
                     Button(
                         onClick = { filePickerLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) },
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     ) {
                         Icon(Icons.Default.Upload, contentDescription = null)
                         Text("Каталог НБУ (завантажити Excel)", modifier = Modifier.padding(start = 8.dp))
-                    }
-
-                    // Кнопка "Магазин НБУ" - посилання на сайт
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://coins.bank.gov.ua/"))
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Outlined.Store, contentDescription = null)
-                        Text("Магазин НБУ", modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -309,7 +294,7 @@ fun CatalogScreen(navController: NavHostController) {
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                     ) {
                         Column(
                             modifier = Modifier.padding(12.dp),
@@ -391,7 +376,7 @@ fun CatalogScreen(navController: NavHostController) {
                                 context.startActivity(intent)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                         ) {
                             Icon(Icons.Outlined.Info, contentDescription = null)
                             Text("Переглянути на сайті НБУ", modifier = Modifier.padding(start = 8.dp))
@@ -421,13 +406,14 @@ fun CatalogItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
@@ -437,8 +423,8 @@ fun CatalogItemCard(
                     .build(),
                 contentDescription = "Фото",
                 modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(IOSDesign.ChipCornerRadius))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )

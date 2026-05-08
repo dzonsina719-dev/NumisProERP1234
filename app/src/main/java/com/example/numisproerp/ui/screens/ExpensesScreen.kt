@@ -50,6 +50,8 @@ import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
+import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.ExpensesViewModel
 import com.numisproerp.ui.viewmodel.ExpensesViewModelFactory
 
@@ -107,7 +109,7 @@ fun ExpensesScreen(navController: NavHostController) {
                 colors = CardDefaults.cardColors(
                     containerColor = AccentRed.copy(alpha = 0.1f)
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
             ) {
                 Row(
                     modifier = Modifier
@@ -182,7 +184,7 @@ fun ExpensesScreen(navController: NavHostController) {
                         label = { Text("Категорія *") },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Оренда, Реклама, Доставка...") },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
 
                     OutlinedTextField(
@@ -191,7 +193,7 @@ fun ExpensesScreen(navController: NavHostController) {
                         label = { Text("Сума *") },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("₴") },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
 
                     OutlinedTextField(
@@ -200,7 +202,7 @@ fun ExpensesScreen(navController: NavHostController) {
                         label = { Text("Коментар") },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Опис витрати") },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     )
 
                     TextButton(
@@ -232,29 +234,20 @@ fun ExpenseCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(AccentOrange.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.Category,
-                    contentDescription = null,
-                    tint = AccentOrange,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            IOSIconChip(
+                icon = Icons.Outlined.Category,
+                tint = AccentOrange
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f)

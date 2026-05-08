@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.numisproerp.NumisProERPApplication
+import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.utils.ExcelExporter
 import com.numisproerp.utils.ExcelImporter
 import kotlinx.coroutines.launch
@@ -100,8 +101,9 @@ fun DocumentsScreen(navController: NavHostController) {
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevationRaised)
             ) {
                 Column(
                     modifier = Modifier
@@ -118,7 +120,8 @@ fun DocumentsScreen(navController: NavHostController) {
 
                     Button(
                         onClick = { importLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     ) {
                         Icon(Icons.Outlined.Publish, contentDescription = null)
                         Text("Імпорт з Excel", modifier = Modifier.padding(start = 8.dp))
@@ -128,7 +131,8 @@ fun DocumentsScreen(navController: NavHostController) {
 
                     Button(
                         onClick = exportAction,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                     ) {
                         Icon(Icons.Outlined.ImportExport, contentDescription = null)
                         Text("Експорт в Excel", modifier = Modifier.padding(start = 8.dp))

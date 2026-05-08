@@ -49,6 +49,8 @@ import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
+import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.theme.IOSIconChip
 import com.numisproerp.ui.viewmodel.StockViewModel
 import com.numisproerp.ui.viewmodel.StockViewModelFactory
 
@@ -104,12 +106,11 @@ fun StockScreen(navController: NavHostController) {
                         }
                     }
                 },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Загальна статистика (кількість товарів та вартість)
             val totalItems = uiState.products.sumOf { it.currentStock }
             val totalValue = uiState.products.sumOf { it.currentStock * it.avgPurchasePrice }
 
@@ -118,7 +119,7 @@ fun StockScreen(navController: NavHostController) {
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
             ) {
                 Row(
                     modifier = Modifier
@@ -205,29 +206,24 @@ fun ProductCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Фото (тимчасово іконка)
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.PhotoCamera,
-                    contentDescription = "Фото",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            IOSIconChip(
+                icon = Icons.Outlined.PhotoCamera,
+                tint = MaterialTheme.colorScheme.primary,
+                chipSize = IOSDesign.IconChipLarge,
+                iconSize = IOSDesign.IconSizeLarge,
+                cornerRadius = IOSDesign.CardCornerRadiusSmall,
+                contentDescription = "Фото"
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 

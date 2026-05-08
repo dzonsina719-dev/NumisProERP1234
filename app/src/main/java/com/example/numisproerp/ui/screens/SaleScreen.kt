@@ -63,6 +63,7 @@ import com.numisproerp.data.repository.Repository
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
+import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.viewmodel.SaleViewModel
 import com.numisproerp.ui.viewmodel.SaleViewModelFactory
 import kotlinx.coroutines.launch
@@ -186,14 +187,13 @@ fun SaleScreen(navController: NavHostController) {
                             }
                         }
                     },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
                 )
 
-                // Результати пошуку клієнтів
                 if (uiState.clientSearchQuery.isNotEmpty() && uiState.filteredClients.isNotEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                     ) {
                         Column {
                             uiState.filteredClients.forEach { client ->
@@ -230,7 +230,7 @@ fun SaleScreen(navController: NavHostController) {
                         ) {
                             Card(
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
                                 colors = CardDefaults.cardColors(
                                     containerColor = AccentGreen.copy(alpha = 0.2f)
                                 )
@@ -307,7 +307,7 @@ fun SaleScreen(navController: NavHostController) {
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                     ) {
                         Text(
                             text = "Кошик порожній. Додайте товари",
@@ -337,7 +337,7 @@ fun SaleScreen(navController: NavHostController) {
                     colors = CardDefaults.cardColors(
                         containerColor = AccentOrange.copy(alpha = 0.1f)
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                 ) {
                     Column(
                         modifier = Modifier
@@ -406,7 +406,7 @@ fun SaleScreen(navController: NavHostController) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
                     enabled = cartItems.isNotEmpty() && uiState.selectedClientId.isNotEmpty()
                 ) {
                     Icon(Icons.Default.Sell, contentDescription = null)
