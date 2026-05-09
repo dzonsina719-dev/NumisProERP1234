@@ -17,9 +17,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoneyOff
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.outlined.RemoveCircle
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Sell
@@ -85,7 +85,7 @@ fun HistoryScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -279,7 +279,7 @@ private fun HistorySortMenu(
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(
-            imageVector = Icons.Default.Sort,
+            imageVector = Icons.AutoMirrored.Filled.Sort,
             contentDescription = tr("Сортування", "Sort"),
             tint = MaterialTheme.colorScheme.primary
         )

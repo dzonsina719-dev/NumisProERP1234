@@ -27,7 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
@@ -99,7 +99,7 @@ fun MyCollectionScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )

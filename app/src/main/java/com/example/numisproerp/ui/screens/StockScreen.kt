@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.PhotoCamera
@@ -85,7 +85,7 @@ fun StockScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )

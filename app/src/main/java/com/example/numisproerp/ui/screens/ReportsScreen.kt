@@ -19,12 +19,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Store
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -96,7 +96,7 @@ fun ReportsScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -271,7 +271,7 @@ fun StatsGrid(
             modifier = Modifier.weight(1f),
             title = tr("Чистий прибуток", "Net profit"),
             value = String.format("%,.2f", uiState.netProfit),
-            icon = Icons.Filled.TrendingUp,
+            icon = Icons.AutoMirrored.Filled.TrendingUp,
             iconColor = if (uiState.netProfit >= 0) AccentGreen else AccentRed,
             valueColor = if (uiState.netProfit >= 0) AccentGreen else AccentRed,
             onClick = { onTabClick(ReportsTab.PROFIT) }

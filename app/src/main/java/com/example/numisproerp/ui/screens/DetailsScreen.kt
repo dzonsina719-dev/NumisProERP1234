@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.LocalAtm
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Card
@@ -142,7 +142,7 @@ fun DetailsScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )

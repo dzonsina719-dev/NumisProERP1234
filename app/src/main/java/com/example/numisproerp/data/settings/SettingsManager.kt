@@ -80,9 +80,30 @@ class SettingsManager @Inject constructor(
             prefs.edit().putString(KEY_LANGUAGE, value.name).apply()
         }
 
+    /**
+     * Поріг низького залишку для in-app сповіщень (товар з `1..threshold` шт.
+     * показується як WARNING). 0 — функцію вимкнено.
+     */
+    private val _lowStockThreshold: MutableState<Int> =
+        mutableStateOf(prefs.getInt(KEY_LOW_STOCK_THRESHOLD, DEFAULT_LOW_STOCK_THRESHOLD))
+
+    val lowStockThresholdState: MutableState<Int>
+        get() = _lowStockThreshold
+
+    var lowStockThreshold: Int
+        get() = _lowStockThreshold.value
+        set(value) {
+            val clamped = value.coerceIn(0, MAX_LOW_STOCK_THRESHOLD)
+            _lowStockThreshold.value = clamped
+            prefs.edit().putInt(KEY_LOW_STOCK_THRESHOLD, clamped).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "numispro_settings"
         private const val KEY_THEME = "app_theme"
         private const val KEY_LANGUAGE = "app_language"
+        private const val KEY_LOW_STOCK_THRESHOLD = "low_stock_threshold"
+        const val DEFAULT_LOW_STOCK_THRESHOLD = 3
+        const val MAX_LOW_STOCK_THRESHOLD = 20
     }
 }

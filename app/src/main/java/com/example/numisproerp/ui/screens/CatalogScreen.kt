@@ -23,9 +23,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
@@ -108,7 +108,7 @@ fun CatalogScreen(
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = tr("Назад", "Back"),
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -125,7 +125,7 @@ fun CatalogScreen(
             if (uiState.isDataLoaded) {
                 Row {
                     IconButton(onClick = { viewModel.toggleSortDialog(true) }) {
-                        Icon(Icons.Default.Sort, contentDescription = tr("Сортувати", "Sort"), tint = AccentBlue)
+                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = tr("Сортувати", "Sort"), tint = AccentBlue)
                     }
                     IconButton(onClick = { viewModel.toggleFilterDialog(true) }) {
                         Icon(Icons.Default.FilterList, contentDescription = tr("Фільтрувати", "Filter"), tint = AccentBlue)

@@ -19,23 +19,32 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.outlined.ImportExport
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Publish
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +57,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import com.numisproerp.R
+import com.numisproerp.BuildConfig
 import com.numisproerp.data.database.AppDatabase
+import com.numisproerp.data.repository.Repository
 import com.numisproerp.data.settings.AppLanguage
 import com.numisproerp.data.settings.AppTheme
 import com.numisproerp.data.settings.SettingsManager
@@ -64,7 +75,8 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    val settingsManager: SettingsManager
+    val settingsManager: SettingsManager,
+    private val repository: Repository
 ) : ViewModel() {
     val theme: AppTheme
         get() = settingsManager.theme
@@ -79,6 +91,14 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(language: AppLanguage) {
         settingsManager.language = language
     }
+
+    fun setLowStockThreshold(value: Int) {
+        settingsManager.lowStockThreshold = value
+    }
+
+    suspend fun clearAllData() {
+        repository.clearAllData()
+    }
 }
 
 @Composable
@@ -88,6 +108,7 @@ fun SettingsScreen(
 ) {
     val currentTheme by viewModel.settingsManager.themeState
     val currentLanguage by viewModel.settingsManager.languageState
+    val currentThreshold by viewModel.settingsManager.lowStockThresholdState
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val database: AppDatabase = remember {
@@ -95,6 +116,10 @@ fun SettingsScreen(
             .fromApplication(context.applicationContext, AppDatabaseEntryPoint::class.java)
             .appDatabase()
     }
+
+    var showResetDialog by remember { mutableStateOf(false) }
+    var resetConfirmation by remember { mutableStateOf("") }
+    val resetDoneText = tr("Усі дані видалено", "All data cleared")
 
     // Texts (collected here to avoid calling tr() inside non-Composable lambdas)
     val importedTitleUa = "Імпорт завершено"
@@ -154,7 +179,7 @@ fun SettingsScreen(
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = tr("Назад", "Back"),
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -282,7 +307,223 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // ===== Notifications =====
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = tr("Сповіщення", "Notifications"),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = tr("Поріг низького залишку", "Low-stock threshold"),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (currentThreshold == 0)
+                                    tr("вимкнено", "off")
+                                else
+                                    "$currentThreshold ${tr("шт.", "pcs")}",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = tr(
+                                "Товари із залишком ≤ цього значення позначаються як низький запас. 0 — вимкнути.",
+                                "Items with stock ≤ this value are flagged as low-stock. 0 disables warnings."
+                            ),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Slider(
+                            value = currentThreshold.toFloat(),
+                            onValueChange = { viewModel.setLowStockThreshold(it.toInt()) },
+                            valueRange = 0f..SettingsManager.MAX_LOW_STOCK_THRESHOLD.toFloat(),
+                            steps = SettingsManager.MAX_LOW_STOCK_THRESHOLD - 1
+                        )
+                    }
+                }
+            }
+
+            // ===== About =====
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = tr("Про додаток", "About app"),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.size(12.dp))
+                        Column {
+                            Text(
+                                text = "NumisProERP",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "${tr("Версія", "Version")} ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = tr(
+                                    "Облік нумізматичної колекції та торгівлі",
+                                    "Numismatic collection & trade accounting"
+                                ),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ===== Danger zone =====
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = tr("Небезпечна зона", "Danger zone"),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = tr(
+                                "Видалити всі дані додатку (товари, контрагентів, операції, колекцію). " +
+                                    "Каталог НБУ зберігається. Дію не можна скасувати.",
+                                "Delete all app data (products, counterparties, operations, collection). " +
+                                    "NBU Catalog is preserved. This action cannot be undone."
+                            ),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                resetConfirmation = ""
+                                showResetDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = null)
+                            Text(
+                                tr("Скинути всі дані", "Reset all data"),
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    if (showResetDialog) {
+        val resetKeyword = "RESET"
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(tr("Видалити всі дані?", "Delete all data?")) },
+            text = {
+                Column {
+                    Text(
+                        text = tr(
+                            "Ви впевнені, що хочете видалити ВСІ дані додатку? " +
+                                "Усі товари, контрагенти, операції та колекція будуть втрачені.\n\n" +
+                                "Введіть RESET у поле нижче для підтвердження.",
+                            "Are you sure you want to delete ALL app data? " +
+                                "All products, counterparties, operations and the collection will be lost.\n\n" +
+                                "Type RESET below to confirm."
+                        ),
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = resetConfirmation,
+                        onValueChange = { resetConfirmation = it },
+                        label = { Text(tr("Підтвердження", "Confirmation")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = resetConfirmation == resetKeyword,
+                    onClick = {
+                        showResetDialog = false
+                        scope.launch {
+                            viewModel.clearAllData()
+                            Toast.makeText(context, resetDoneText, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                ) {
+                    Text(
+                        tr("Видалити", "Delete"),
+                        color = if (resetConfirmation == resetKeyword)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(tr("Скасувати", "Cancel"))
+                }
+            }
+        )
     }
 }
 

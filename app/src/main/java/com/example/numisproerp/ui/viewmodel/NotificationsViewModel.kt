@@ -1,16 +1,16 @@
 package com.numisproerp.ui.viewmodel
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.numisproerp.data.repository.Repository
+import com.numisproerp.data.settings.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 enum class NotificationSeverity { CRITICAL, WARNING }
 
@@ -23,45 +23,50 @@ data class NotificationItem(
     val severity: NotificationSeverity
 )
 
-private const val LOW_STOCK_THRESHOLD = 3
-
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    private val repository: Repository
+    private val repository: Repository,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
 
-    private val _notifications = MutableStateFlow<List<NotificationItem>>(emptyList())
-    val notifications: StateFlow<List<NotificationItem>> = _notifications.asStateFlow()
+    /**
+     * Реактивний потік сповіщень.
+     *
+     * Комбінує:
+     *  - `Flow<List<ProductWithStock>>` з repository (оновлюється автоматично
+     *     при будь-якій зміні складу — закупівля / продаж / списання);
+     *  - `Flow<Int>` поточного порогу з SettingsManager (миттєво пересортовує
+     *     warning-and-critical розподіл при зміні слайдера у Налаштуваннях).
+     *
+     * Завдяки `stateIn(WhileSubscribed)` обчислення зупиняється, коли
+     * жоден підписник не активний (TopBar з дашборду + NotificationsScreen).
+     */
+    val notifications: StateFlow<List<NotificationItem>> = combine(
+        repository.getProductsWithStock(""),
+        snapshotFlow { settingsManager.lowStockThreshold }
+    ) { productsWithStock, threshold ->
+        val items = mutableListOf<NotificationItem>()
 
-    init {
-        refresh()
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            val productsWithStock = repository.getProductsWithStock("").first()
-
-            val items = mutableListOf<NotificationItem>()
-
-            // Out of stock — товари, які раніше були закуплені, але повністю вичерпані
-            productsWithStock
-                .filter { it.totalPurchased > 0 && it.currentStock <= 0 }
-                .forEach { p ->
-                    items.add(
-                        NotificationItem(
-                            id = "out_${p.catalogId}",
-                            titleUa = "Закінчився товар: ${p.name}",
-                            titleEn = "Out of stock: ${p.name}",
-                            descriptionUa = "Залишок 0. Розгляньте можливість поповнення.",
-                            descriptionEn = "Stock is 0. Consider restocking.",
-                            severity = NotificationSeverity.CRITICAL
-                        )
+        // Out of stock — товари, які раніше були закуплені, але повністю вичерпані
+        productsWithStock
+            .filter { it.totalPurchased > 0 && it.currentStock <= 0 }
+            .forEach { p ->
+                items.add(
+                    NotificationItem(
+                        id = "out_${p.catalogId}",
+                        titleUa = "Закінчився товар: ${p.name}",
+                        titleEn = "Out of stock: ${p.name}",
+                        descriptionUa = "Залишок 0. Розгляньте можливість поповнення.",
+                        descriptionEn = "Stock is 0. Consider restocking.",
+                        severity = NotificationSeverity.CRITICAL
                     )
-                }
+                )
+            }
 
-            // Low stock — товари з малим залишком (>0 і <=THRESHOLD)
+        // Low stock — тільки якщо threshold > 0
+        if (threshold > 0) {
             productsWithStock
-                .filter { it.currentStock in 1..LOW_STOCK_THRESHOLD }
+                .filter { it.currentStock in 1..threshold }
                 .forEach { p ->
                     items.add(
                         NotificationItem(
@@ -74,8 +79,11 @@ class NotificationsViewModel @Inject constructor(
                         )
                     )
                 }
-
-            _notifications.value = items
         }
-    }
+        items
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList()
+    )
 }

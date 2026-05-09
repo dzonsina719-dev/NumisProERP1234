@@ -372,4 +372,22 @@ class Repository @Inject constructor(
 
         allTransactions.sortedByDescending { it.date }.take(limit)
     }
+
+    /**
+     * Повне очищення всіх таблиць (товари, контрагенти, операції, колекція).
+     * Каталог НБУ не очищується — він імпортується окремою кнопкою з Excel
+     * і не вважається "робочими даними". Викликається з Налаштувань після
+     * подвійного підтвердження.
+     */
+    suspend fun clearAllData() = withContext(Dispatchers.IO) {
+        // Спочатку дочірні таблиці (operations), потім довідники
+        database.writeoffDao().deleteAll()
+        database.saleDao().deleteAll()
+        database.purchaseDao().deleteAll()
+        database.otherExpenseDao().deleteAll()
+        database.collectionItemDao().deleteAll()
+        database.productDao().deleteAll()
+        database.clientDao().deleteAll()
+        database.supplierDao().deleteAll()
+    }
 }

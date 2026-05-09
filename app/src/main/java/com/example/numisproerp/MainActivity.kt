@@ -12,7 +12,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
-import androidx.compose.material.icons.outlined.Help
+import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
@@ -190,7 +190,7 @@ fun TopBar(
         },
         actions = {
             IconButton(onClick = onHelpClick) {
-                Icon(Icons.Outlined.Help, contentDescription = tr("Довідка", "Help"))
+                Icon(Icons.AutoMirrored.Outlined.Help, contentDescription = tr("Довідка", "Help"))
             }
             IconButton(onClick = onNotificationsClick) {
                 BadgedBox(badge = {

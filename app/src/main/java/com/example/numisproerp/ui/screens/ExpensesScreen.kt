@@ -18,8 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -84,7 +84,7 @@ fun ExpensesScreen(
                 .align(Alignment.TopStart)
         ) {
             Icon(
-                Icons.Default.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = tr("Назад", "Back"),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -352,7 +352,7 @@ private fun ExpensesSortMenu(
     }
     Box {
         TextButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.Sort, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null)
             Spacer(modifier = Modifier.width(4.dp))
             Text(label)
         }
