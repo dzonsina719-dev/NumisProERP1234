@@ -20,7 +20,9 @@ import com.numisproerp.data.entities.Sale
 import com.numisproerp.data.entities.Supplier
 import com.numisproerp.data.entities.Writeoff
 import com.numisproerp.data.entities.CollectionItem
+import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -378,16 +380,23 @@ class Repository @Inject constructor(
      * Каталог НБУ не очищується — він імпортується окремою кнопкою з Excel
      * і не вважається "робочими даними". Викликається з Налаштувань після
      * подвійного підтвердження.
+     *
+     * Атомарність: усі 8 DELETE виконуються всередині `database.withTransaction`,
+     * тобто або всі викочуються, або жоден. `NonCancellable` гарантує, що навіть
+     * якщо користувач вийде зі Settings (composition-scope cancel) — операція
+     * добіжить до кінця, а не лишить БД у частково очищеному стані.
      */
-    suspend fun clearAllData() = withContext(Dispatchers.IO) {
-        // Спочатку дочірні таблиці (operations), потім довідники
-        database.writeoffDao().deleteAll()
-        database.saleDao().deleteAll()
-        database.purchaseDao().deleteAll()
-        database.otherExpenseDao().deleteAll()
-        database.collectionItemDao().deleteAll()
-        database.productDao().deleteAll()
-        database.clientDao().deleteAll()
-        database.supplierDao().deleteAll()
+    suspend fun clearAllData() = withContext(NonCancellable + Dispatchers.IO) {
+        database.withTransaction {
+            // Спочатку дочірні таблиці (operations), потім довідники
+            database.writeoffDao().deleteAll()
+            database.saleDao().deleteAll()
+            database.purchaseDao().deleteAll()
+            database.otherExpenseDao().deleteAll()
+            database.collectionItemDao().deleteAll()
+            database.productDao().deleteAll()
+            database.clientDao().deleteAll()
+            database.supplierDao().deleteAll()
+        }
     }
 }
