@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,11 +39,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.numisproerp.R
+import com.numisproerp.data.settings.AppTheme
 import com.numisproerp.ui.navigation.Screen
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
@@ -50,6 +55,7 @@ import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.AccentRed
 import com.numisproerp.ui.theme.IOSDesign
 import com.numisproerp.ui.theme.IOSIconChip
+import com.numisproerp.ui.theme.LocalAppTheme
 import com.numisproerp.ui.viewmodel.DashboardViewModel
 import com.numisproerp.ui.viewmodel.DashboardData
 import com.numisproerp.ui.viewmodel.RecentTransaction
@@ -115,25 +121,7 @@ fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Column {
-                Text(
-                    text = "NumisProERP",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Облік та каталогізація",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                Text(
-                    text = currentDate,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
+            DashboardHeader(currentDate = currentDate)
         }
 
         item {
@@ -198,6 +186,65 @@ fun DashboardContent(
 
         items(data.recentTransactions) { transaction ->
             RecentTransactionItem(transaction = transaction)
+        }
+    }
+}
+
+@Composable
+private fun DashboardHeader(currentDate: String) {
+    val theme = LocalAppTheme.current
+    if (theme == AppTheme.OLEG_SMILE) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.oleg_smile_emblem),
+                contentDescription = "OlegSmile",
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(36.dp))
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "OlegSmile@",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "NumisProERP — облік та каталогізація",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = currentDate,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+    } else {
+        Column {
+            Text(
+                text = "NumisProERP",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Облік та каталогізація",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Text(
+                text = currentDate,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
@@ -303,21 +350,25 @@ fun QuickAccessRow(
     ) {
         QuickAccessButton(
             icon = Icons.Outlined.LocalAtm,
+            tileRes = R.drawable.tile_purchase,
             label = "Закупівля",
             onClick = onPurchaseClick
         )
         QuickAccessButton(
             icon = Icons.Filled.ShoppingCart,
+            tileRes = R.drawable.tile_sale,
             label = "Продаж",
             onClick = onSaleClick
         )
         QuickAccessButton(
             icon = Icons.Filled.Store,
+            tileRes = R.drawable.tile_stock,
             label = "Склад",
             onClick = onStockClick
         )
         QuickAccessButton(
             icon = Icons.Filled.People,
+            tileRes = R.drawable.tile_clients,
             label = "Клієнти",
             onClick = onClientsClick
         )
@@ -337,21 +388,25 @@ fun QuickAccessRow2(
     ) {
         QuickAccessButton(
             icon = Icons.Outlined.BarChart,
+            tileRes = R.drawable.tile_reports,
             label = "Звіти",
             onClick = onReportsClick
         )
         QuickAccessButton(
             icon = Icons.Filled.People,
+            tileRes = R.drawable.tile_suppliers,
             label = "Постачальники",
             onClick = onSuppliersClick
         )
         QuickAccessButton(
             icon = Icons.Outlined.Receipt,
+            tileRes = R.drawable.tile_expenses,
             label = "Витрати",
             onClick = onExpensesClick
         )
         QuickAccessButton(
             icon = Icons.Outlined.BarChart,
+            tileRes = R.drawable.tile_collection,
             label = "Документи",
             onClick = onDocumentsClick
         )
@@ -362,24 +417,36 @@ fun QuickAccessRow2(
 fun QuickAccessButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
+    tileRes: Int,
     label: String,
     onClick: () -> Unit
 ) {
+    val theme = LocalAppTheme.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .clickable { onClick() }
             .padding(8.dp)
     ) {
-        IOSIconChip(
-            icon = icon,
-            tint = MaterialTheme.colorScheme.primary,
-            chipSize = IOSDesign.IconChipLarge,
-            iconSize = IOSDesign.IconSizeLarge,
-            cornerRadius = 16.dp,
-            backgroundAlpha = 0.12f,
-            contentDescription = label
-        )
+        if (theme == AppTheme.OLEG_SMILE) {
+            Image(
+                painter = painterResource(id = tileRes),
+                contentDescription = label,
+                modifier = Modifier
+                    .size(IOSDesign.IconChipLarge)
+                    .clip(RoundedCornerShape(16.dp))
+            )
+        } else {
+            IOSIconChip(
+                icon = icon,
+                tint = MaterialTheme.colorScheme.primary,
+                chipSize = IOSDesign.IconChipLarge,
+                iconSize = IOSDesign.IconSizeLarge,
+                cornerRadius = 16.dp,
+                backgroundAlpha = 0.12f,
+                contentDescription = label
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = label,

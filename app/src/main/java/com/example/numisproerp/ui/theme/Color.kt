@@ -52,3 +52,23 @@ val PurpleGrey40 = Color(0xFF8E8E93)
 val PurpleGrey80 = Color(0xFFAEAEB2)
 val Pink40 = IOSPink
 val Pink80 = IOSPink
+
+// =============================================================================
+// OlegSmile theme palette — чорно-золота фірмова тема із емблемою лева.
+// Використовується, якщо в Налаштуваннях обрано AppTheme.OLEG_SMILE.
+// =============================================================================
+val OlegBackground = Color(0xFF0B0B0D)
+val OlegSurface = Color(0xFF15141A)
+val OlegSurfaceVariant = Color(0xFF1F1D26)
+val OlegPrimaryContainer = Color(0xFF2A2316)
+val OlegOnSurface = Color(0xFFEDE3C8)
+val OlegOnSurfaceVariant = Color(0xFFC4B68A)
+
+val OlegGold = Color(0xFFD4AF37)
+val OlegGoldBright = Color(0xFFF5D76E)
+val OlegGoldDim = Color(0xFF8E7625)
+
+val OlegRed = Color(0xFFE57373)
+val OlegGreen = Color(0xFF7FCB7F)
+val OlegOrange = Color(0xFFE5A54A)
+val OlegBlue = Color(0xFF6FA8DC)

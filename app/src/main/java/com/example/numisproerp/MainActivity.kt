@@ -41,20 +41,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.numisproerp.data.settings.SettingsManager
 import com.numisproerp.ui.navigation.NavGraph
 import com.numisproerp.ui.navigation.Screen
 import com.numisproerp.ui.theme.NumisProERPTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsManager: SettingsManager
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            NumisProERPTheme {
+            val theme by settingsManager.themeState
+            NumisProERPTheme(appTheme = theme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -87,9 +94,9 @@ fun NumisProERPNavigation() {
         DrawerItem("Звіти", Screen.Reports.route, false),
         DrawerItem("Постачальники", Screen.Suppliers.route, false),
         DrawerItem("Клієнти", Screen.Clients.route, false),
-        DrawerItem("Списання", "writeoff", true),
-        DrawerItem("Історія", "history", true),
-        DrawerItem("Налаштування", "settings", true)
+        DrawerItem("Списання", Screen.WriteoffPlaceholder.route, true),
+        DrawerItem("Історія", Screen.HistoryPlaceholder.route, true),
+        DrawerItem("Налаштування", Screen.Settings.route, false)
     )
 
     ModalNavigationDrawer(
@@ -174,7 +181,7 @@ fun BottomBar(navController: NavHostController) {
         BottomNavItem("Головна", Icons.Default.Home, Screen.Dashboard.route, false),
         BottomNavItem("Каталог", Icons.Default.Store, Screen.Catalog.route, false),  // ЗМІНЕНО: isPlaceholder = false
         BottomNavItem("Товари", Icons.Default.Store, Screen.Stock.route, false),
-        BottomNavItem("Налаштування", Icons.Default.Settings, "settings", true)
+        BottomNavItem("Налаштування", Icons.Default.Settings, Screen.Settings.route, false)
     )
 
     NavigationBar {
