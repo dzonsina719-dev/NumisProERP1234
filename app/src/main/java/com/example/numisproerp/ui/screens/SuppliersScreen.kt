@@ -33,6 +33,8 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -230,125 +232,86 @@ fun SuppliersScreen(
         }
     }
 
-    // Діалог детального перегляду (залишається без змін)
     if (showDetailDialog && selectedSupplier != null) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = {
                 showDetailDialog = false
                 selectedSupplier = null
                 editMode = false
             },
-            title = {
-                if (editMode) Text(tr("Редагувати постачальника", "Edit supplier"))
-                else Text(selectedSupplier!!.name)
-            },
-            text = {
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    if (editMode) {
-                        OutlinedTextField(
-                            value = editName,
-                            onValueChange = { editName = it },
-                            label = { Text(tr("Назва / Ім'я *", "Name *")) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (editMode) tr("Редагувати постачальника", "Edit supplier") else selectedSupplier!!.name,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
-                            value = editContact,
-                            onValueChange = { editContact = it },
-                            label = { Text(tr("Контактні дані", "Contact info")) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
-                        )
-                        OutlinedTextField(
-                            value = editType,
-                            onValueChange = { editType = it },
-                            label = { Text(tr("Тип", "Type")) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
-                        )
-                        OutlinedTextField(
-                            value = editComment,
-                            onValueChange = { editComment = it },
-                            label = { Text(tr("Коментар", "Comment")) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
-                        )
-                    } else {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(tr("Основна інформація", "Main info"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                if (selectedSupplier!!.contact.isNotEmpty()) {
-                                    Row {
-                                        Text("${tr("Контакти", "Contacts")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                        Text(selectedSupplier!!.contact, fontSize = 13.sp, color = AccentBlue)
-                                    }
-                                }
-                                if (selectedSupplier!!.type.isNotEmpty()) {
-                                    Row {
-                                        Text("${tr("Тип", "Type")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                        Text(selectedSupplier!!.type, fontSize = 13.sp)
-                                    }
-                                }
-                                if (selectedSupplier!!.comment.isNotEmpty()) {
-                                    Row {
-                                        Text("${tr("Коментар", "Comment")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                        Text(selectedSupplier!!.comment, fontSize = 13.sp)
-                                    }
-                                }
-                                Row {
-                                    Text("${tr("Всього закуплено", "Total purchased")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                    Text(
-                                        text = String.format("%,.2f ₴", selectedSupplier!!.totalSpent),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AccentRed
-                                    )
-                                }
-                            }
+                        IconButton(onClick = {
+                            showDetailDialog = false
+                            selectedSupplier = null
+                            editMode = false
+                        }) {
+                            Icon(Icons.Outlined.Clear, contentDescription = tr("Закрити", "Close"))
                         }
+                    }
 
-                        if (uiState.purchaseHistory.isNotEmpty()) {
-                            Card(
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (editMode) {
+                            OutlinedTextField(
+                                value = editName,
+                                onValueChange = { editName = it },
+                                label = { Text(tr("Назва / Ім'я *", "Name *")) },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = AccentGreen.copy(alpha = 0.1f)
-                                ),
-                                shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = tr("Історія закупівель", "Purchase history"),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-
-                                    LazyColumn(
-                                        modifier = Modifier.height(200.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        items(uiState.purchaseHistory) { purchase ->
-                                            PurchaseHistoryItem(purchase = purchase)
-                                        }
-                                    }
-                                }
-                            }
+                                shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                            )
+                            OutlinedTextField(
+                                value = editContact,
+                                onValueChange = { editContact = it },
+                                label = { Text(tr("Контактні дані", "Contact info")) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                            )
+                            OutlinedTextField(
+                                value = editType,
+                                onValueChange = { editType = it },
+                                label = { Text(tr("Тип", "Type")) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                            )
+                            OutlinedTextField(
+                                value = editComment,
+                                onValueChange = { editComment = it },
+                                label = { Text(tr("Коментар", "Comment")) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                            )
                         } else {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -357,86 +320,144 @@ fun SuppliersScreen(
                                 ),
                                 shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
                             ) {
-                                Text(
-                                    text = tr("Немає історії закупівель", "No purchase history"),
+                                Column(
                                     modifier = Modifier.padding(12.dp),
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (editMode) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        TextButton(
-                            onClick = {
-                                if (editName.isNotBlank()) {
-                                    viewModel.updateSupplier(
-                                        supplierId = selectedSupplier!!.supplierId,
-                                        name = editName,
-                                        contact = editContact,
-                                        type = editType,
-                                        comment = editComment
-                                    )
-                                    editMode = false
-                                    showDetailDialog = false
-                                    selectedSupplier = null
-                                    Toast.makeText(context, supplierUpdatedText, Toast.LENGTH_SHORT).show()
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(tr("Основна інформація", "Main info"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    if (selectedSupplier!!.contact.isNotEmpty()) {
+                                        Row {
+                                            Text("${tr("Контакти", "Contacts")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                            Text(selectedSupplier!!.contact, fontSize = 13.sp, color = AccentBlue)
+                                        }
+                                    }
+                                    if (selectedSupplier!!.type.isNotEmpty()) {
+                                        Row {
+                                            Text("${tr("Тип", "Type")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                            Text(selectedSupplier!!.type, fontSize = 13.sp)
+                                        }
+                                    }
+                                    if (selectedSupplier!!.comment.isNotEmpty()) {
+                                        Row {
+                                            Text("${tr("Коментар", "Comment")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                            Text(selectedSupplier!!.comment, fontSize = 13.sp)
+                                        }
+                                    }
+                                    Row {
+                                        Text("${tr("Всього закуплено", "Total purchased")}: ", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                        Text(
+                                            text = String.format("%,.2f ₴", selectedSupplier!!.totalSpent),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentRed
+                                        )
+                                    }
                                 }
                             }
-                        ) {
-                            Text(tr("Зберегти", "Save"), color = AccentGreen)
-                        }
-                        TextButton(onClick = { editMode = false }) {
-                            Text(tr("Скасувати", "Cancel"), color = AccentRed)
+
+                            if (uiState.purchaseHistory.isNotEmpty()) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = AccentGreen.copy(alpha = 0.1f)
+                                    ),
+                                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = tr("Історія закупівель", "Purchase history"),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+
+                                        uiState.purchaseHistory.forEach { purchase ->
+                                            PurchaseHistoryItem(purchase = purchase)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
+                                ) {
+                                    Text(
+                                        text = tr("Немає історії закупівель", "No purchase history"),
+                                        modifier = Modifier.padding(12.dp),
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
                         }
                     }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        TextButton(
-                            onClick = {
-                                editName = selectedSupplier!!.name
-                                editContact = selectedSupplier!!.contact
-                                editType = selectedSupplier!!.type
-                                editComment = selectedSupplier!!.comment
-                                editMode = true
-                            }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (editMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null)
-                            Text(tr("Редагувати", "Edit"))
-                        }
-                        TextButton(
-                            onClick = {
-                                supplierToDelete = selectedSupplier
-                                showDeleteConfirmation = true
+                            Button(
+                                onClick = {
+                                    if (editName.isNotBlank()) {
+                                        viewModel.updateSupplier(
+                                            supplierId = selectedSupplier!!.supplierId,
+                                            name = editName,
+                                            contact = editContact,
+                                            type = editType,
+                                            comment = editComment
+                                        )
+                                        editMode = false
+                                        showDetailDialog = false
+                                        selectedSupplier = null
+                                        Toast.makeText(context, supplierUpdatedText, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            ) {
+                                Text(tr("Зберегти", "Save"))
                             }
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null)
-                            Text(tr("Видалити", "Delete"), color = AccentRed)
+                            TextButton(onClick = { editMode = false }) {
+                                Text(tr("Скасувати", "Cancel"), color = AccentRed)
+                            }
                         }
-                    }
-                }
-            },
-            dismissButton = {
-                if (!editMode) {
-                    TextButton(onClick = {
-                        showDetailDialog = false
-                        selectedSupplier = null
-                    }) {
-                        Text(tr("Закрити", "Close"))
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    editName = selectedSupplier!!.name
+                                    editContact = selectedSupplier!!.contact
+                                    editType = selectedSupplier!!.type
+                                    editComment = selectedSupplier!!.comment
+                                    editMode = true
+                                }
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                                Text(tr("Редагувати", "Edit"))
+                            }
+                            TextButton(
+                                onClick = {
+                                    supplierToDelete = selectedSupplier
+                                    showDeleteConfirmation = true
+                                }
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null)
+                                Text(tr("Видалити", "Delete"), color = AccentRed)
+                            }
+                        }
                     }
                 }
             }
-        )
+        }
     }
 
     if (showDeleteConfirmation && supplierToDelete != null) {
@@ -684,14 +705,14 @@ fun PurchaseHistoryItem(purchase: PurchaseWithProductName) {
             Text(
                 text = "${purchase.quantity} ${tr("шт.", "pcs")}",
                 fontSize = 12.sp,
-                modifier = Modifier.width(60.dp)
+                modifier = Modifier.width(45.dp)
             )
             Text(
                 text = String.format("%,.2f ₴", purchase.totalAmount),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = AccentRed,
-                modifier = Modifier.width(100.dp)
+                modifier = Modifier.width(85.dp)
             )
         }
     }
