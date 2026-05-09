@@ -735,44 +735,40 @@ fun SaleHistoryItem(sale: SaleWithProductName) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
+            Text(
+                text = sale.productName,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = sale.productName,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
                 Text(
                     text = dateFormat.format(Date(sale.date)),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "${sale.quantity} ${tr("шт.", "pcs")}",
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        text = String.format("%,.2f ₴", sale.totalAmount),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentGreen
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "${sale.quantity} ${tr("шт.", "pcs")}",
-                fontSize = 11.sp,
-                modifier = Modifier.width(40.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = String.format("%,.2f ₴", sale.totalAmount),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = AccentGreen,
-                modifier = Modifier.width(80.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End
-            )
         }
     }
 }

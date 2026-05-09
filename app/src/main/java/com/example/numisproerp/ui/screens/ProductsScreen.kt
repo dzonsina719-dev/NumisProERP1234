@@ -183,9 +183,11 @@ fun ProductsScreen(
     }
 
     selectedProduct?.let { product ->
+        val imageUrls = viewModel.getProductImageUrls(product)
         ProductDetailDialog(
             product = product,
-            imageUrl = viewModel.getProductImageUrl(product),
+            imageUrlFront = imageUrls.first,
+            imageUrlBack = imageUrls.second,
             onDismiss = { selectedProduct = null }
         )
     }
@@ -286,7 +288,8 @@ private fun ProductThumbnail(photoPath: String) {
 @Composable
 fun ProductDetailDialog(
     product: Product,
-    imageUrl: String = product.photoPath,
+    imageUrlFront: String = product.photoPath,
+    imageUrlBack: String = "",
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -306,8 +309,42 @@ fun ProductDetailDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                ProductDetailPhoto(photoPath = imageUrl)
-                if (imageUrl.isNotBlank()) {
+                if (imageUrlFront.isNotBlank() || imageUrlBack.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (imageUrlFront.isNotBlank()) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                ProductDetailPhoto(photoPath = imageUrlFront)
+                                if (imageUrlBack.isNotBlank()) {
+                                    Text(
+                                        text = tr("Аверс", "Obverse"),
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (imageUrlBack.isNotBlank()) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                ProductDetailPhoto(photoPath = imageUrlBack)
+                                Text(
+                                    text = tr("Реверс", "Reverse"),
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 DetailRow("ID каталогу", product.catalogId)

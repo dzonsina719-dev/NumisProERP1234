@@ -427,7 +427,7 @@ fun QuickAccessButton(
 ) {
     val theme = LocalAppTheme.current
     val tileWidth = 82.dp
-    val tileHeight = 100.dp
+    val tileHeight = 104.dp
     val tileCorner = 18.dp
     Box(
         modifier = modifier
@@ -442,28 +442,28 @@ fun QuickAccessButton(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(top = 10.dp, bottom = 6.dp, start = 4.dp, end = 4.dp)
+            modifier = Modifier.padding(top = 6.dp, bottom = 4.dp, start = 4.dp, end = 4.dp)
         ) {
             if (theme == AppTheme.OLEG_SMILE) {
                 Image(
                     painter = painterResource(id = tileRes),
                     contentDescription = label,
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(14.dp))
                 )
             } else {
                 IOSIconChip(
                     icon = icon,
                     tint = MaterialTheme.colorScheme.primary,
-                    chipSize = 52.dp,
-                    iconSize = 28.dp,
-                    cornerRadius = 12.dp,
+                    chipSize = 68.dp,
+                    iconSize = 36.dp,
+                    cornerRadius = 14.dp,
                     backgroundAlpha = 0.12f,
                     contentDescription = label
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
                 fontSize = 10.sp,

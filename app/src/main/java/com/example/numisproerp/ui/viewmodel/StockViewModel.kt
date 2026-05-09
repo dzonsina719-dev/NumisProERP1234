@@ -23,7 +23,8 @@ data class StockUiState(
     val showSortDialog: Boolean = false,
     val showMaterialDialog: Boolean = false,
     val filterMaterial: String = "",
-    val materials: List<String> = emptyList()
+    val materials: List<String> = emptyList(),
+    val catalogImagePairMap: Map<String, Pair<String, String>> = emptyMap()
 )
 
 @HiltViewModel
@@ -37,6 +38,7 @@ class StockViewModel @Inject constructor(
     init {
         loadProducts()
         loadCategories()
+        loadCatalogImages()
     }
 
     fun updateSearchQuery(query: String) {
@@ -120,8 +122,20 @@ class StockViewModel @Inject constructor(
         }
     }
 
+    private fun loadCatalogImages() {
+        viewModelScope.launch {
+            val imagePairMap = repository.getCatalogImagePairMap()
+            _uiState.value = _uiState.value.copy(catalogImagePairMap = imagePairMap)
+        }
+    }
+
     suspend fun getProductDetails(catalogId: String): com.numisproerp.data.entities.Product? {
         return repository.getProductById(catalogId)
+    }
+
+    fun getProductImageUrls(product: com.numisproerp.data.entities.Product): Pair<String, String> {
+        if (product.photoPath.isNotBlank()) return Pair(product.photoPath, "")
+        return _uiState.value.catalogImagePairMap[product.name] ?: Pair("", "")
     }
 
     fun addProduct(product: com.numisproerp.data.entities.Product) {

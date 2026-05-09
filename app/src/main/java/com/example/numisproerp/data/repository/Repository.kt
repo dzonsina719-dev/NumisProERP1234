@@ -96,6 +96,18 @@ class Repository @Inject constructor(
         }
     }
 
+    suspend fun getCatalogImagePairMap(): Map<String, Pair<String, String>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val catalogItems = database.catalogDao().getAllItemsSync()
+                catalogItems.filter { it.imageUrlFront.isNotEmpty() || it.imageUrlBack.isNotEmpty() }
+                    .associate { it.name to Pair(it.imageUrlFront, it.imageUrlBack) }
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
+    }
+
     suspend fun getProductById(catalogId: String): Product? {
         return withContext(Dispatchers.IO) {
             database.productDao().getProductById(catalogId)

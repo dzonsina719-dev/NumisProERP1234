@@ -262,7 +262,13 @@ fun StockScreen(
     }
 
     selectedProduct?.let { product ->
-        ProductDetailDialog(product = product, onDismiss = { selectedProduct = null })
+        val imageUrls = viewModel.getProductImageUrls(product)
+        ProductDetailDialog(
+            product = product,
+            imageUrlFront = imageUrls.first,
+            imageUrlBack = imageUrls.second,
+            onDismiss = { selectedProduct = null }
+        )
     }
 
     // Sort dialog
