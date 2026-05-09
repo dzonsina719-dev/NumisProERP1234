@@ -1,5 +1,6 @@
 package com.numisproerp.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,17 +18,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.outlined.LocalAtm
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -72,22 +78,47 @@ fun DetailsScreen(
     var isLoading by remember { mutableStateOf(true) }
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
-    var totalAmount by remember { mutableStateOf(0.0) }
     var supplierNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var clientNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
+    var selectedSupplierIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedClientIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showFilter by remember { mutableStateOf(false) }
 
     val unknownSupplierText = tr("Невідомий постачальник", "Unknown supplier")
     val unknownClientText = tr("Невідомий клієнт", "Unknown client")
     val purchaseLabel = tr("Закупівля", "Purchase")
     val saleLabel = tr("Продаж", "Sale")
 
+    val filteredPurchases by remember(purchases, selectedSupplierIds) {
+        derivedStateOf {
+            if (selectedSupplierIds.isEmpty()) purchases
+            else purchases.filter { it.supplierId in selectedSupplierIds }
+        }
+    }
+
+    val filteredSales by remember(sales, selectedClientIds) {
+        derivedStateOf {
+            if (selectedClientIds.isEmpty()) sales
+            else sales.filter { it.clientId in selectedClientIds }
+        }
+    }
+
+    val totalAmount by remember(type, filteredPurchases, filteredSales) {
+        derivedStateOf {
+            when (type) {
+                "purchases" -> filteredPurchases.sumOf { it.totalAmount }
+                "profit" -> filteredSales.sumOf { it.totalAmount }
+                else -> filteredSales.sumOf { it.totalAmount } - filteredPurchases.sumOf { it.totalAmount }
+            }
+        }
+    }
+
     LaunchedEffect(type) {
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             when (type) {
                 "purchases" -> {
                     purchases = database.purchaseDao().getAllPurchases()
-                    totalAmount = purchases.sumOf { it.totalAmount }
-                    // Завантажуємо назви постачальників
                     val supplierMap = mutableMapOf<String, String>()
                     purchases.map { it.supplierId }.distinct().forEach { supplierId ->
                         val supplier = database.supplierDao().getSupplierById(supplierId)
@@ -97,8 +128,6 @@ fun DetailsScreen(
                 }
                 "profit" -> {
                     sales = database.saleDao().getAllSales()
-                    totalAmount = sales.sumOf { it.totalAmount }
-                    // Завантажуємо назви клієнтів
                     val clientMap = mutableMapOf<String, String>()
                     sales.map { it.clientId }.distinct().forEach { clientId ->
                         val client = database.clientDao().getClientById(clientId)
@@ -109,15 +138,12 @@ fun DetailsScreen(
                 else -> { // balance
                     purchases = database.purchaseDao().getAllPurchases()
                     sales = database.saleDao().getAllSales()
-                    totalAmount = sales.sumOf { it.totalAmount } - purchases.sumOf { it.totalAmount }
-                    // Завантажуємо назви постачальників
                     val supplierMap = mutableMapOf<String, String>()
                     purchases.map { it.supplierId }.distinct().forEach { supplierId ->
                         val supplier = database.supplierDao().getSupplierById(supplierId)
                         supplierMap[supplierId] = supplier?.name ?: unknownSupplierText
                     }
                     supplierNames = supplierMap
-                    // Завантажуємо назви клієнтів
                     val clientMap = mutableMapOf<String, String>()
                     sales.map { it.clientId }.distinct().forEach { clientId ->
                         val client = database.clientDao().getClientById(clientId)
@@ -135,19 +161,6 @@ fun DetailsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        IconButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier
-                .padding(16.dp)
-                .align(Alignment.TopStart)
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = tr("Назад", "Back"),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center)
@@ -156,16 +169,124 @@ fun DetailsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 72.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
             ) {
-                Text(
-                    text = title,
-                    fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = tr("Назад", "Back"),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Text(
+                        text = title,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (type == "purchases" || type == "profit") {
+                        IconButton(onClick = { showFilter = !showFilter }) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = tr("Фільтр", "Filter"),
+                                tint = if (
+                                    (type == "purchases" && selectedSupplierIds.isNotEmpty()) ||
+                                    (type == "profit" && selectedClientIds.isNotEmpty())
+                                ) AccentOrange else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AnimatedVisibility(visible = showFilter && (type == "purchases" || type == "profit")) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(IOSDesign.CardCornerRadius)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (type == "purchases") tr("Фільтр по постачальнику", "Filter by supplier")
+                                    else tr("Фільтр по клієнту", "Filter by client"),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                if ((type == "purchases" && selectedSupplierIds.isNotEmpty()) ||
+                                    (type == "profit" && selectedClientIds.isNotEmpty())
+                                ) {
+                                    TextButton(onClick = {
+                                        selectedSupplierIds = emptySet()
+                                        selectedClientIds = emptySet()
+                                    }) {
+                                        Text(
+                                            tr("Скинути", "Reset"),
+                                            fontSize = 12.sp,
+                                            color = AccentOrange
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (type == "purchases") {
+                                supplierNames.forEach { (id, name) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = id in selectedSupplierIds,
+                                            onCheckedChange = { checked ->
+                                                selectedSupplierIds = if (checked) {
+                                                    selectedSupplierIds + id
+                                                } else {
+                                                    selectedSupplierIds - id
+                                                }
+                                            }
+                                        )
+                                        Text(text = name, fontSize = 14.sp)
+                                    }
+                                }
+                            } else {
+                                clientNames.forEach { (id, name) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = id in selectedClientIds,
+                                            onCheckedChange = { checked ->
+                                                selectedClientIds = if (checked) {
+                                                    selectedClientIds + id
+                                                } else {
+                                                    selectedClientIds - id
+                                                }
+                                            }
+                                        )
+                                        Text(text = name, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -183,12 +304,12 @@ fun DetailsScreen(
                         Text(
                             text = "${tr("Загальна сума", "Total amount")}:",
                             fontSize = 16.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                            fontWeight = FontWeight.Medium
                         )
                         Text(
                             text = String.format("%,.2f ₴", totalAmount),
                             fontSize = 18.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            fontWeight = FontWeight.Bold,
                             color = if (type == "purchases") AccentOrange else AccentGreen
                         )
                     }
@@ -196,9 +317,9 @@ fun DetailsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (type == "purchases" && purchases.isEmpty()) {
+                if (type == "purchases" && filteredPurchases.isEmpty()) {
                     Text(text = tr("Немає даних про закупівлі", "No purchase data"), modifier = Modifier.fillMaxWidth())
-                } else if (type == "profit" && sales.isEmpty()) {
+                } else if (type == "profit" && filteredSales.isEmpty()) {
                     Text(text = tr("Немає даних про продажі", "No sales data"), modifier = Modifier.fillMaxWidth())
                 } else if (type == "balance" && purchases.isEmpty() && sales.isEmpty()) {
                     Text(text = tr("Немає даних про операції", "No transaction data"), modifier = Modifier.fillMaxWidth())
@@ -207,7 +328,7 @@ fun DetailsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (type == "purchases" || type == "balance") {
-                            items(purchases) { purchase ->
+                            items(filteredPurchases) { purchase ->
                                 TransactionDetailItem(
                                     date = purchase.date,
                                     description = purchaseLabel,
@@ -218,7 +339,7 @@ fun DetailsScreen(
                             }
                         }
                         if (type == "profit" || type == "balance") {
-                            items(sales) { sale ->
+                            items(filteredSales) { sale ->
                                 TransactionDetailItem(
                                     date = sale.date,
                                     description = saleLabel,
@@ -267,7 +388,7 @@ fun TransactionDetailItem(
             ) {
                 Text(
                     text = description,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
                 Text(
@@ -278,7 +399,7 @@ fun TransactionDetailItem(
             }
             Text(
                 text = if (isPurchase) "-${String.format("%,.2f", amount)} ₴" else "+${String.format("%,.2f", amount)} ₴",
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontWeight = FontWeight.Bold,
                 color = if (isPurchase) AccentOrange else AccentGreen
             )
         }

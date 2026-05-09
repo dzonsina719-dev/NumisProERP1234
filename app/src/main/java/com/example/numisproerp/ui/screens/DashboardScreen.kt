@@ -212,7 +212,7 @@ private fun DashboardHeader(currentDate: String) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "OlegSmile@",
+                    text = "OlegSmile",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
