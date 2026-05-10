@@ -1,5 +1,6 @@
 package com.numisproerp.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Search
@@ -103,6 +106,7 @@ fun MyCollectionScreen(
     navController: NavHostController,
     viewModel: MyCollectionViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var detailItem by remember { mutableStateOf<CollectionItem?>(null) }
     var deleteCandidate by remember { mutableStateOf<CollectionItem?>(null) }
@@ -308,7 +312,7 @@ fun MyCollectionScreen(
             errorMessage = uiState.errorMessage,
             onDismiss = { viewModel.closeDialog() },
             onSave = { name, series, category, material, nominal, quality,
-                       description, photoPath, estimatedValue, quantity ->
+                       description, photoPath, estimatedValue, quantity, sourceUrl ->
                 viewModel.saveItem(
                     name = name,
                     series = series,
@@ -319,7 +323,8 @@ fun MyCollectionScreen(
                     description = description,
                     photoPath = photoPath,
                     estimatedValue = estimatedValue,
-                    quantity = quantity
+                    quantity = quantity,
+                    sourceUrl = sourceUrl
                 )
             }
         )
@@ -363,6 +368,31 @@ fun MyCollectionScreen(
                     if (detail.description.isNotEmpty()) {
                         Text(tr("Опис:", "Description:"), fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         Text(detail.description, fontSize = 13.sp)
+                    }
+                    if (detail.sourceUrl.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = {
+                                runCatching {
+                                    val uri = normalizeUrl(detail.sourceUrl)
+                                    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                        ) {
+                            Icon(Icons.Default.OpenInBrowser, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(tr("Відкрити сайт", "Open website"))
+                        }
+                        Text(
+                            text = detail.sourceUrl,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                 }
             },
@@ -554,7 +584,8 @@ private fun AddOrEditCollectionDialog(
         description: String,
         photoPath: String,
         estimatedValue: Double,
-        quantity: Int
+        quantity: Int,
+        sourceUrl: String
     ) -> Unit
 ) {
     val context = LocalContext.current
@@ -566,6 +597,7 @@ private fun AddOrEditCollectionDialog(
     var quality by remember { mutableStateOf(initial?.quality ?: "") }
     var description by remember { mutableStateOf(initial?.description ?: "") }
     var photoPath by remember { mutableStateOf(initial?.photoPath ?: "") }
+    var sourceUrl by remember { mutableStateOf(initial?.sourceUrl ?: "") }
     var estimatedValueStr by remember {
         mutableStateOf(initial?.estimatedValue?.let { if (it == 0.0) "" else it.toString() } ?: "")
     }
@@ -702,6 +734,22 @@ private fun AddOrEditCollectionDialog(
                     minLines = 2,
                     maxLines = 4
                 )
+                OutlinedTextField(
+                    value = sourceUrl,
+                    onValueChange = { sourceUrl = it },
+                    label = {
+                        Text(
+                            tr(
+                                "Посилання на сайт (фото/відео)",
+                                "Website link (photo/video)"
+                            )
+                        )
+                    },
+                    placeholder = { Text("https://") },
+                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
                 if (errorMessage.isNotEmpty()) {
                     Text(
                         errorMessage,
@@ -717,7 +765,7 @@ private fun AddOrEditCollectionDialog(
                 val est = estimatedValueStr.replace(',', '.').toDoubleOrNull() ?: 0.0
                 onSave(
                     name, series, category, material, nominal, quality,
-                    description, photoPath, est, qty
+                    description, photoPath, est, qty, sourceUrl
                 )
             }) {
                 Text(if (initial == null) tr("Додати", "Add") else tr("Зберегти", "Save"))
@@ -891,3 +939,19 @@ private fun FilterDimensionRow(
     )
 }
 
+
+/**
+ * Нормалізує користувацький рядок з посиланням до Uri, придатного для
+ * `Intent.ACTION_VIEW`. Якщо в адресі немає схеми (`http://`, `https://`),
+ * додаємо `https://` за замовчуванням.
+ */
+private fun normalizeUrl(raw: String): Uri {
+    val trimmed = raw.trim()
+    val withScheme = if (trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)) {
+        trimmed
+    } else {
+        "https://$trimmed"
+    }
+    return Uri.parse(withScheme)
+}

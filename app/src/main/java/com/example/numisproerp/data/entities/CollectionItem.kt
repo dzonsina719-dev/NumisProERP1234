@@ -26,5 +26,6 @@ data class CollectionItem(
     val photoPath: String = "",
     val estimatedValue: Double = 0.0,
     val quantity: Int = 1,
-    val dateAdded: Long = System.currentTimeMillis()
+    val dateAdded: Long = System.currentTimeMillis(),
+    val sourceUrl: String = ""
 )

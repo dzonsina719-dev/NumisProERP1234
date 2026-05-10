@@ -38,7 +38,7 @@ import com.numisproerp.data.entities.Note
         CollectionItem::class,
         Note::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -138,6 +138,15 @@ abstract class AppDatabase : RoomDatabase() {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         "ALTER TABLE `notes` ADD COLUMN `attachments` TEXT NOT NULL DEFAULT ''"
+                    )
+                }
+            },
+            // 15 → 16: додано колонку sourceUrl до collection_items
+            // — посилання на зовнішній ресурс (фото/відео в браузері).
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE `collection_items` ADD COLUMN `sourceUrl` TEXT NOT NULL DEFAULT ''"
                     )
                 }
             }
