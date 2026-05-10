@@ -198,7 +198,7 @@ fun DashboardContent(
 private fun DashboardHeader(currentDate: String) {
     val theme = LocalAppTheme.current
     if (theme == AppTheme.OLEG_SMILE || theme == AppTheme.OLEG_SMILE_V2) {
-        val titleText = if (theme == AppTheme.OLEG_SMILE_V2) "OlegSmile v2" else "OlegSmile"
+        val titleText = "OlegSmile"
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
