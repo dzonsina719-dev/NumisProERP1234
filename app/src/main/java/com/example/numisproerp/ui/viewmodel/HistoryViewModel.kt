@@ -38,10 +38,15 @@ data class HistoryEntry(
     val comment: String
 )
 
+/**
+ * Текущий вибраний фільтр історії. `null` = «Всі», тобто без фільтрації.
+ * Користувач натискає одну кнопку (радіо-стиль), а не комбінує кілька
+ * категорій — щоб «Закупівля» дійсно показувала тільки закупівлі.
+ */
 data class HistoryUiState(
     val entries: List<HistoryEntry> = emptyList(),
     val isLoading: Boolean = false,
-    val selectedTypes: Set<HistoryEntryType> = HistoryEntryType.values().toSet(),
+    val selectedType: HistoryEntryType? = null,
     val sort: HistorySort = HistorySort.DATE_DESC
 )
 
@@ -131,13 +136,12 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
-    fun toggleType(type: HistoryEntryType) {
-        val current = _uiState.value.selectedTypes.toMutableSet()
-        if (current.contains(type)) current.remove(type) else current.add(type)
-        // Якщо користувач зняв усі — повертаємо повний набір, щоб не показувати
-        // порожній список без причини.
-        val next = if (current.isEmpty()) HistoryEntryType.values().toSet() else current
-        _uiState.value = _uiState.value.copy(selectedTypes = next)
+    /**
+     * Вибір одного типу. Якщо натиснули вже активний тип — переходимо на «Всі».
+     */
+    fun selectType(type: HistoryEntryType?) {
+        val next = if (_uiState.value.selectedType == type) null else type
+        _uiState.value = _uiState.value.copy(selectedType = next)
     }
 
     fun setSort(sort: HistorySort) {
@@ -146,7 +150,11 @@ class HistoryViewModel @Inject constructor(
 
     fun visibleEntries(): List<HistoryEntry> {
         val state = _uiState.value
-        val filtered = state.entries.filter { it.type in state.selectedTypes }
+        val filtered = if (state.selectedType == null) {
+            state.entries
+        } else {
+            state.entries.filter { it.type == state.selectedType }
+        }
         return when (state.sort) {
             HistorySort.DATE_DESC -> filtered.sortedByDescending { it.date }
             HistorySort.DATE_ASC -> filtered.sortedBy { it.date }

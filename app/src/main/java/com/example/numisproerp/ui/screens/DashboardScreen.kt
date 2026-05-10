@@ -197,14 +197,15 @@ fun DashboardContent(
 @Composable
 private fun DashboardHeader(currentDate: String) {
     val theme = LocalAppTheme.current
-    if (theme == AppTheme.OLEG_SMILE) {
+    if (theme == AppTheme.OLEG_SMILE || theme == AppTheme.OLEG_SMILE_V2) {
+        val titleText = if (theme == AppTheme.OLEG_SMILE_V2) "OlegSmile v2" else "OlegSmile"
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = R.drawable.oleg_smile_emblem),
-                contentDescription = "OlegSmile",
+                contentDescription = titleText,
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(36.dp))
@@ -212,7 +213,7 @@ private fun DashboardHeader(currentDate: String) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "OlegSmile",
+                    text = titleText,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -444,7 +445,7 @@ fun QuickAccessButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(top = 6.dp, bottom = 4.dp, start = 4.dp, end = 4.dp)
         ) {
-            if (theme == AppTheme.OLEG_SMILE) {
+            if (theme == AppTheme.OLEG_SMILE || theme == AppTheme.OLEG_SMILE_V2) {
                 Image(
                     painter = painterResource(id = tileRes),
                     contentDescription = label,

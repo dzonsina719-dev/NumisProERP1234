@@ -197,7 +197,8 @@ class MyCollectionViewModel @Inject constructor(
         description: String,
         photoPath: String,
         estimatedValue: Double,
-        quantity: Int
+        quantity: Int,
+        sourceUrl: String = ""
     ) {
         if (name.isBlank()) {
             _uiState.value = _uiState.value.copy(errorMessage = "Введіть назву товару")
@@ -223,7 +224,8 @@ class MyCollectionViewModel @Inject constructor(
                     photoPath = photoPath,
                     estimatedValue = estimatedValue,
                     quantity = quantity,
-                    dateAdded = System.currentTimeMillis()
+                    dateAdded = System.currentTimeMillis(),
+                    sourceUrl = sourceUrl.trim()
                 )
                 repository.addCollectionItem(newItem)
                 _uiState.value = _uiState.value.copy(
@@ -242,7 +244,8 @@ class MyCollectionViewModel @Inject constructor(
                     description = description.trim(),
                     photoPath = photoPath,
                     estimatedValue = estimatedValue,
-                    quantity = quantity
+                    quantity = quantity,
+                    sourceUrl = sourceUrl.trim()
                 )
                 repository.updateCollectionItem(updated)
                 _uiState.value = _uiState.value.copy(

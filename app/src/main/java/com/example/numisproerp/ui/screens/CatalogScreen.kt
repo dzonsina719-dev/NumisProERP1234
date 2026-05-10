@@ -26,10 +26,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
@@ -69,6 +75,8 @@ import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
 import com.numisproerp.ui.theme.IOSDesign
+import com.numisproerp.ui.viewmodel.CatalogFilterField
+import com.numisproerp.ui.viewmodel.CatalogSortField
 import com.numisproerp.ui.viewmodel.CatalogViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -200,75 +208,148 @@ fun CatalogScreen(
         }
     }
 
-    // Діалог сортування
+    // Діалог сортування — поле + напрямок (зростання / спадання).
     if (uiState.showSortDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleSortDialog(false) },
             title = { Text(tr("Сортувати", "Sort")) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        Triple("name", tr("За назвою", "By name"), Icons.Default.SortByAlpha),
-                        Triple("date", tr("За датою", "By date"), Icons.Default.CalendarMonth),
-                        Triple("denomination", tr("За номіналом", "By denomination"), Icons.Default.Numbers)
-                    ).forEach { (value, label, icon) ->
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val sortOptions = listOf(
+                        SortOption(CatalogSortField.NAME, tr("За назвою", "By name"), Icons.Default.SortByAlpha),
+                        SortOption(CatalogSortField.DATE, tr("За датою", "By date"), Icons.Default.CalendarMonth),
+                        SortOption(CatalogSortField.DENOMINATION, tr("За номіналом", "By denomination"), Icons.Default.Numbers),
+                        SortOption(CatalogSortField.MINTAGE, tr("За тиражем", "By mintage"), Icons.Default.Layers),
+                        SortOption(CatalogSortField.MATERIAL, tr("За матеріалом", "By material"), Icons.Default.Science),
+                        SortOption(CatalogSortField.SERIES, tr("За серією", "By series"), Icons.Default.Category)
+                    )
+                    sortOptions.forEach { opt ->
                         SortFilterRow(
-                            icon = icon,
-                            label = label,
-                            selected = uiState.sortBy == value,
+                            icon = opt.icon,
+                            label = opt.label,
+                            selected = uiState.sortField == opt.field,
                             onClick = {
-                                viewModel.setSortBy(value)
-                                viewModel.toggleSortDialog(false)
+                                val ascending = if (uiState.sortField == opt.field) !uiState.sortAscending else true
+                                viewModel.setSort(opt.field, ascending)
                             }
                         )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = { viewModel.setSort(uiState.sortField, true) },
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
+                            colors = if (uiState.sortAscending)
+                                androidx.compose.material3.ButtonDefaults.buttonColors()
+                            else
+                                androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+                        ) {
+                            Icon(Icons.Default.ArrowUpward, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(tr("Зростання", "Asc"))
+                        }
+                        Button(
+                            onClick = { viewModel.setSort(uiState.sortField, false) },
+                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
+                            colors = if (!uiState.sortAscending)
+                                androidx.compose.material3.ButtonDefaults.buttonColors()
+                            else
+                                androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+                        ) {
+                            Icon(Icons.Default.ArrowDownward, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(tr("Спадання", "Desc"))
+                        }
+                    }
                 }
             },
-            confirmButton = {},
-            dismissButton = {
+            confirmButton = {
                 TextButton(onClick = { viewModel.toggleSortDialog(false) }) {
-                    Text(tr("Скасувати", "Cancel"))
+                    Text(tr("Готово", "Done"))
                 }
             }
         )
     }
 
-    // Діалог фільтру
+    // Діалог фільтру — підтримує кілька осей: категорія, матеріал, серія,
+    // рік, якість.
     if (uiState.showFilterDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.toggleFilterDialog(false) },
-            title = { Text(tr("Фільтрувати за категорією", "Filter by category")) },
+            title = { Text(tr("Фільтри каталогу", "Catalog filters")) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SortFilterRow(
-                        icon = Icons.Default.FilterList,
-                        label = tr("Всі категорії", "All categories"),
-                        selected = uiState.selectedCategory.isEmpty(),
-                        onClick = {
-                            viewModel.clearCategory()
-                            viewModel.toggleFilterDialog(false)
+                    FilterAxisSection(
+                        title = tr("Категорія", "Category"),
+                        icon = Icons.Default.Apps,
+                        values = uiState.categories,
+                        selected = uiState.selectedFilters[CatalogFilterField.CATEGORY],
+                        onSelect = { value ->
+                            if (value == null) viewModel.clearFilter(CatalogFilterField.CATEGORY)
+                            else viewModel.setFilter(CatalogFilterField.CATEGORY, value)
                         }
                     )
-                    uiState.categories.forEach { category ->
-                        SortFilterRow(
-                            icon = Icons.Default.Apps,
-                            label = category,
-                            selected = uiState.selectedCategory == category,
-                            onClick = {
-                                viewModel.selectCategory(category)
-                                viewModel.toggleFilterDialog(false)
-                            }
-                        )
-                    }
+                    FilterAxisSection(
+                        title = tr("Матеріал", "Material"),
+                        icon = Icons.Default.Science,
+                        values = uiState.materials,
+                        selected = uiState.selectedFilters[CatalogFilterField.MATERIAL],
+                        onSelect = { value ->
+                            if (value == null) viewModel.clearFilter(CatalogFilterField.MATERIAL)
+                            else viewModel.setFilter(CatalogFilterField.MATERIAL, value)
+                        }
+                    )
+                    FilterAxisSection(
+                        title = tr("Серія", "Series"),
+                        icon = Icons.Default.Category,
+                        values = uiState.seriesList,
+                        selected = uiState.selectedFilters[CatalogFilterField.SERIES],
+                        onSelect = { value ->
+                            if (value == null) viewModel.clearFilter(CatalogFilterField.SERIES)
+                            else viewModel.setFilter(CatalogFilterField.SERIES, value)
+                        }
+                    )
+                    FilterAxisSection(
+                        title = tr("Рік", "Year"),
+                        icon = Icons.Default.CalendarMonth,
+                        values = uiState.years,
+                        selected = uiState.selectedFilters[CatalogFilterField.YEAR],
+                        onSelect = { value ->
+                            if (value == null) viewModel.clearFilter(CatalogFilterField.YEAR)
+                            else viewModel.setFilter(CatalogFilterField.YEAR, value)
+                        }
+                    )
+                    FilterAxisSection(
+                        title = tr("Якість", "Quality"),
+                        icon = Icons.Default.Star,
+                        values = uiState.qualities,
+                        selected = uiState.selectedFilters[CatalogFilterField.QUALITY],
+                        onSelect = { value ->
+                            if (value == null) viewModel.clearFilter(CatalogFilterField.QUALITY)
+                            else viewModel.setFilter(CatalogFilterField.QUALITY, value)
+                        }
+                    )
                 }
             },
-            confirmButton = {},
-            dismissButton = {
+            confirmButton = {
                 TextButton(onClick = { viewModel.toggleFilterDialog(false) }) {
-                    Text(tr("Скасувати", "Cancel"))
+                    Text(tr("Готово", "Done"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.clearAllFilters()
+                }) {
+                    Text(tr("Скинути", "Reset"))
                 }
             }
         )
@@ -455,6 +536,52 @@ fun CatalogScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * Один варіант сортування каталогу для діалогу: поле + людська мітка + іконка.
+ */
+private data class SortOption(
+    val field: CatalogSortField,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+/**
+ * Секція діалогу фільтра — одна вісь (категорія / матеріал / серія / рік / якість).
+ * Якщо в системі немає значень для осі — секція не показується, щоб не плодити
+ * порожні розділи.
+ */
+@Composable
+private fun FilterAxisSection(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    values: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit
+) {
+    if (values.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+        SortFilterRow(
+            icon = Icons.Default.FilterList,
+            label = tr("Усі", "All"),
+            selected = selected == null,
+            onClick = { onSelect(null) }
+        )
+        values.forEach { value ->
+            SortFilterRow(
+                icon = icon,
+                label = value,
+                selected = selected == value,
+                onClick = { onSelect(value) }
+            )
+        }
     }
 }
 

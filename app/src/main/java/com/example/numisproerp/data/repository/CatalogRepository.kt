@@ -20,6 +20,14 @@ class CatalogRepository @Inject constructor(
 
     fun getItemsByCategory(category: String): Flow<List<CatalogItem>> = catalogDao.getItemsByCategory(category)
 
+    suspend fun getAllItemsSync(): List<CatalogItem> = withContext(Dispatchers.IO) {
+        try {
+            catalogDao.getAllItemsSync()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun getDistinctCategories(): List<String> = withContext(Dispatchers.IO) {
         try {
             catalogDao.getDistinctCategories()
