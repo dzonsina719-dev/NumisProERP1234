@@ -16,11 +16,13 @@ import javax.inject.Singleton
  */
 enum class AppTheme {
     DEFAULT,
-    OLEG_SMILE;
+    OLEG_SMILE,
+    OLEG_SMILE_V2;
 
     companion object {
         fun fromKey(key: String?): AppTheme = when (key) {
             OLEG_SMILE.name -> OLEG_SMILE
+            OLEG_SMILE_V2.name -> OLEG_SMILE_V2
             else -> DEFAULT
         }
     }
@@ -130,6 +132,61 @@ class SettingsManager @Inject constructor(
             prefs.edit().putString(KEY_NOTE_ALARM_SOUND_LABEL, value).apply()
         }
 
+    // ==================== ШРИФТИ ====================
+    private val _fontSize: MutableState<Int> =
+        mutableStateOf(prefs.getInt(KEY_FONT_SIZE, DEFAULT_FONT_SIZE))
+
+    val fontSizeState: MutableState<Int>
+        get() = _fontSize
+
+    var fontSize: Int
+        get() = _fontSize.value
+        set(value) {
+            val clamped = value.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
+            _fontSize.value = clamped
+            prefs.edit().putInt(KEY_FONT_SIZE, clamped).apply()
+        }
+
+    private val _fontFamily: MutableState<String> =
+        mutableStateOf(prefs.getString(KEY_FONT_FAMILY, DEFAULT_FONT_FAMILY) ?: DEFAULT_FONT_FAMILY)
+
+    val fontFamilyState: MutableState<String>
+        get() = _fontFamily
+
+    var fontFamily: String
+        get() = _fontFamily.value
+        set(value) {
+            _fontFamily.value = value
+            prefs.edit().putString(KEY_FONT_FAMILY, value).apply()
+        }
+
+    private val _fontColor: MutableState<String> =
+        mutableStateOf(prefs.getString(KEY_FONT_COLOR, "") ?: "")
+
+    val fontColorState: MutableState<String>
+        get() = _fontColor
+
+    var fontColor: String
+        get() = _fontColor.value
+        set(value) {
+            _fontColor.value = value
+            prefs.edit().putString(KEY_FONT_COLOR, value).apply()
+        }
+
+    // ==================== ФОНОВИЙ МАЛЮНОК ====================
+    private val _backgroundImagePath: MutableState<String> =
+        mutableStateOf(prefs.getString(KEY_BG_IMAGE_PATH, "") ?: "")
+
+    val backgroundImagePathState: MutableState<String>
+        get() = _backgroundImagePath
+
+    var backgroundImagePath: String
+        get() = _backgroundImagePath.value
+        set(value) {
+            _backgroundImagePath.value = value
+            prefs.edit().putString(KEY_BG_IMAGE_PATH, value).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "numispro_settings"
         private const val KEY_THEME = "app_theme"
@@ -137,7 +194,15 @@ class SettingsManager @Inject constructor(
         private const val KEY_LOW_STOCK_THRESHOLD = "low_stock_threshold"
         private const val KEY_NOTE_ALARM_SOUND_URI = "note_alarm_sound_uri"
         private const val KEY_NOTE_ALARM_SOUND_LABEL = "note_alarm_sound_label"
+        private const val KEY_FONT_SIZE = "font_size"
+        private const val KEY_FONT_FAMILY = "font_family"
+        private const val KEY_FONT_COLOR = "font_color"
+        private const val KEY_BG_IMAGE_PATH = "bg_image_path"
         const val DEFAULT_LOW_STOCK_THRESHOLD = 3
         const val MAX_LOW_STOCK_THRESHOLD = 20
+        const val DEFAULT_FONT_SIZE = 14
+        const val MIN_FONT_SIZE = 10
+        const val MAX_FONT_SIZE = 24
+        const val DEFAULT_FONT_FAMILY = "system"
     }
 }

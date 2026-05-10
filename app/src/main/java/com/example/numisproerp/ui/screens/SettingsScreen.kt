@@ -16,12 +16,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ImportExport
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Publish
@@ -33,6 +44,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -48,6 +60,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +84,8 @@ import com.numisproerp.utils.ExcelExporter
 import com.numisproerp.utils.ExcelImporter
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
@@ -78,27 +94,12 @@ class SettingsViewModel @Inject constructor(
     val settingsManager: SettingsManager,
     private val repository: Repository
 ) : ViewModel() {
-    val theme: AppTheme
-        get() = settingsManager.theme
-
-    val language: AppLanguage
-        get() = settingsManager.language
-
-    fun setTheme(theme: AppTheme) {
-        settingsManager.theme = theme
-    }
-
-    fun setLanguage(language: AppLanguage) {
-        settingsManager.language = language
-    }
-
-    fun setLowStockThreshold(value: Int) {
-        settingsManager.lowStockThreshold = value
-    }
-
-    suspend fun clearAllData() {
-        repository.clearAllData()
-    }
+    val theme: AppTheme get() = settingsManager.theme
+    val language: AppLanguage get() = settingsManager.language
+    fun setTheme(theme: AppTheme) { settingsManager.theme = theme }
+    fun setLanguage(language: AppLanguage) { settingsManager.language = language }
+    fun setLowStockThreshold(value: Int) { settingsManager.lowStockThreshold = value }
+    suspend fun clearAllData() { repository.clearAllData() }
 }
 
 @Composable
@@ -106,9 +107,6 @@ fun SettingsScreen(
     navController: NavHostController,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val currentTheme by viewModel.settingsManager.themeState
-    val currentLanguage by viewModel.settingsManager.languageState
-    val currentThreshold by viewModel.settingsManager.lowStockThresholdState
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val database: AppDatabase = remember {
@@ -116,14 +114,18 @@ fun SettingsScreen(
             .fromApplication(context.applicationContext, AppDatabaseEntryPoint::class.java)
             .appDatabase()
     }
+    val settings = viewModel.settingsManager
 
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showDataDialog by remember { mutableStateOf(false) }
+    var showFontsDialog by remember { mutableStateOf(false) }
+    var showBackgroundDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var resetConfirmation by remember { mutableStateOf("") }
     val resetDoneText = tr("Усі дані видалено", "All data cleared")
 
-    // Texts (collected here to avoid calling tr() inside non-Composable lambdas)
-    val importedTitleUa = "Імпорт завершено"
-    val importedTitleEn = "Import complete"
+    val importedTitle = tr("Імпорт завершено", "Import complete")
     val productsLbl = tr("Товарів", "Products")
     val clientsLbl = tr("Клієнтів", "Clients")
     val suppliersLbl = tr("Постачальників", "Suppliers")
@@ -132,7 +134,6 @@ fun SettingsScreen(
     val expensesLbl = tr("Витрат", "Expenses")
     val writeoffsLbl = tr("Списань", "Writeoffs")
     val collectionLbl = tr("Колекція", "Collection")
-    val importedTitle = tr(importedTitleUa, importedTitleEn)
     val exportDoneTitle = tr("Експорт завершено", "Export complete")
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -164,6 +165,32 @@ fun SettingsScreen(
                 if (result.success) "$exportDoneTitle: ${result.filePath}" else result.message,
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    val bgSetText = tr("Фон встановлено", "Background set")
+    val bgErrorText = tr("Помилка завантаження", "Load error")
+    val bgPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val target = File(context.filesDir, "custom_bg.jpg")
+                try {
+                    val stream = context.contentResolver.openInputStream(uri)
+                    if (stream != null) {
+                        stream.use { input ->
+                            FileOutputStream(target).use { output -> input.copyTo(output) }
+                        }
+                        settings.backgroundImagePath = target.absolutePath
+                        Toast.makeText(context, bgSetText, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, bgErrorText, Toast.LENGTH_SHORT).show()
+                    }
+                } catch (_: Exception) {
+                    Toast.makeText(context, bgErrorText, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -200,134 +227,60 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 72.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ===== Theme =====
             item {
-                Text(
-                    text = tr("Тема оформлення", "Theme"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                SettingsButton(
+                    icon = Icons.Default.ColorLens,
+                    title = tr("Тема", "Theme"),
+                    subtitle = settings.theme.name,
+                    onClick = { showThemeDialog = true }
                 )
             }
             item {
-                ThemeOptionCard(
-                    title = tr("Стандартна", "Default"),
-                    subtitle = tr(
-                        "iOS-стиль зі світлою/темною темою системи",
-                        "iOS-style with system light/dark theme"
-                    ),
-                    selected = currentTheme == AppTheme.DEFAULT,
-                    onClick = { viewModel.setTheme(AppTheme.DEFAULT) }
+                SettingsButton(
+                    icon = Icons.Default.Language,
+                    title = tr("Мова", "Language"),
+                    subtitle = settings.language.name,
+                    onClick = { showLanguageDialog = true }
                 )
             }
             item {
-                ThemeOptionCard(
-                    title = "OlegSmile",
-                    subtitle = tr(
-                        "Чорно-золота фірмова тема з емблемою лева",
-                        "Black-and-gold branded theme with lion emblem"
-                    ),
-                    emblem = R.drawable.oleg_smile_emblem,
-                    selected = currentTheme == AppTheme.OLEG_SMILE,
-                    onClick = { viewModel.setTheme(AppTheme.OLEG_SMILE) }
-                )
-            }
-
-            // ===== Language =====
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tr("Мова інтерфейсу", "App language"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                SettingsButton(
+                    icon = Icons.Default.Storage,
+                    title = tr("Дані", "Data"),
+                    subtitle = tr("Імпорт / Експорт", "Import / Export"),
+                    onClick = { showDataDialog = true }
                 )
             }
             item {
-                LanguageOptionCard(
-                    title = "Українська",
-                    subtitle = "UA",
-                    selected = currentLanguage == AppLanguage.UA,
-                    onClick = { viewModel.setLanguage(AppLanguage.UA) }
+                SettingsButton(
+                    icon = Icons.Default.FormatSize,
+                    title = tr("Шрифти", "Fonts"),
+                    subtitle = tr("Розмір, тип, колір", "Size, type, color"),
+                    onClick = { showFontsDialog = true }
                 )
             }
             item {
-                LanguageOptionCard(
-                    title = "English",
-                    subtitle = "EN",
-                    selected = currentLanguage == AppLanguage.EN,
-                    onClick = { viewModel.setLanguage(AppLanguage.EN) }
+                SettingsButton(
+                    icon = Icons.Default.Image,
+                    title = tr("Фоновий малюнок", "Background image"),
+                    subtitle = if (settings.backgroundImagePath.isNotBlank())
+                        tr("Встановлено", "Set") else tr("Не вибрано", "Not set"),
+                    onClick = { showBackgroundDialog = true }
                 )
             }
 
-            // ===== Data: Import / Export =====
+            // Notifications threshold
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tr("Дані", "Data"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-            item {
+                Spacer(modifier = Modifier.height(4.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Button(
-                            onClick = {
-                                importLauncher.launch(
-                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
-                        ) {
-                            Icon(Icons.Outlined.Publish, contentDescription = null)
-                            Text(
-                                tr("Імпорт з Excel", "Import from Excel"),
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = exportAction,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
-                        ) {
-                            Icon(Icons.Outlined.ImportExport, contentDescription = null)
-                            Text(
-                                tr("Експорт в Excel", "Export to Excel"),
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ===== Notifications =====
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tr("Сповіщення", "Notifications"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
-                ) {
+                    val currentThreshold by settings.lowStockThresholdState
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -336,28 +289,15 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = tr("Поріг низького залишку", "Low-stock threshold"),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 15.sp, fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (currentThreshold == 0)
-                                    tr("вимкнено", "off")
-                                else
-                                    "$currentThreshold ${tr("шт.", "pcs")}",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary,
+                                text = if (currentThreshold == 0) tr("вимкнено", "off")
+                                else "$currentThreshold ${tr("шт.", "pcs")}",
+                                fontSize = 14.sp, color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = tr(
-                                "Товари із залишком ≤ цього значення позначаються як низький запас. 0 — вимкнути.",
-                                "Items with stock ≤ this value are flagged as low-stock. 0 disables warnings."
-                            ),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
                         Slider(
                             value = currentThreshold.toFloat(),
                             onValueChange = { viewModel.setLowStockThreshold(it.toInt()) },
@@ -368,16 +308,7 @@ fun SettingsScreen(
                 }
             }
 
-            // ===== About =====
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tr("Про додаток", "About app"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
+            // About
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -386,124 +317,105 @@ fun SettingsScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Outlined.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.size(12.dp))
                         Column {
+                            Text("NumisProERP", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                             Text(
-                                text = "NumisProERP",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "${tr("Версія", "Version")} ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                            Text(
-                                text = tr(
-                                    "Облік нумізматичної колекції та торгівлі",
-                                    "Numismatic collection & trade accounting"
-                                ),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                "${tr("Версія", "Version")} ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
                     }
                 }
             }
 
-            // ===== Danger zone =====
+            // Danger zone
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tr("Небезпечна зона", "Danger zone"),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            item {
-                Card(
+                Spacer(modifier = Modifier.height(4.dp))
+                Button(
+                    onClick = { resetConfirmation = ""; showResetDialog = true },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = tr(
-                                "Видалити всі дані додатку (товари, контрагентів, операції, колекцію). " +
-                                    "Каталог НБУ зберігається. Дію не можна скасувати.",
-                                "Delete all app data (products, counterparties, operations, collection). " +
-                                    "NBU Catalog is preserved. This action cannot be undone."
-                            ),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                resetConfirmation = ""
-                                showResetDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(Icons.Default.DeleteForever, contentDescription = null)
-                            Text(
-                                tr("Скинути всі дані", "Reset all data"),
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.DeleteForever, contentDescription = null)
+                    Text(tr("Скинути всі дані", "Reset all data"), modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }
     }
 
+    // ===== DIALOGS =====
+    if (showThemeDialog) {
+        ThemeDialog(
+            current = settings.theme,
+            onSelect = { viewModel.setTheme(it) },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            current = settings.language,
+            onSelect = { viewModel.setLanguage(it) },
+            onDismiss = { showLanguageDialog = false }
+        )
+    }
+
+    if (showDataDialog) {
+        DataDialog(
+            onImport = {
+                importLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            },
+            onExport = exportAction,
+            onDismiss = { showDataDialog = false }
+        )
+    }
+
+    if (showFontsDialog) {
+        FontsDialog(
+            settings = settings,
+            onDismiss = { showFontsDialog = false }
+        )
+    }
+
+    if (showBackgroundDialog) {
+        BackgroundImageDialog(
+            currentPath = settings.backgroundImagePath,
+            onPickImage = { bgPickerLauncher.launch("image/*") },
+            onRemove = { settings.backgroundImagePath = "" },
+            onDismiss = { showBackgroundDialog = false }
+        )
+    }
+
     if (showResetDialog) {
-        val resetKeyword = "RESET"
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             title = { Text(tr("Видалити всі дані?", "Delete all data?")) },
             text = {
                 Column {
                     Text(
-                        text = tr(
-                            "Ви впевнені, що хочете видалити ВСІ дані додатку? " +
-                                "Усі товари, контрагенти, операції та колекція будуть втрачені.\n\n" +
-                                "Введіть RESET у поле нижче для підтвердження.",
-                            "Are you sure you want to delete ALL app data? " +
-                                "All products, counterparties, operations and the collection will be lost.\n\n" +
-                                "Type RESET below to confirm."
-                        ),
-                        fontSize = 13.sp
+                        tr(
+                            "Введіть RESET у поле нижче для підтвердження.",
+                            "Type RESET below to confirm."
+                        ), fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = resetConfirmation,
                         onValueChange = { resetConfirmation = it },
                         label = { Text(tr("Підтвердження", "Confirmation")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = resetConfirmation == resetKeyword,
+                    enabled = resetConfirmation == "RESET",
                     onClick = {
                         showResetDialog = false
                         scope.launch {
@@ -511,113 +423,266 @@ fun SettingsScreen(
                             Toast.makeText(context, resetDoneText, Toast.LENGTH_LONG).show()
                         }
                     }
-                ) {
-                    Text(
-                        tr("Видалити", "Delete"),
-                        color = if (resetConfirmation == resetKeyword)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                }
+                ) { Text(tr("Видалити", "Delete"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text(tr("Скасувати", "Cancel"))
-                }
+                TextButton(onClick = { showResetDialog = false }) { Text(tr("Скасувати", "Cancel")) }
             }
         )
     }
 }
 
-@Composable
-private fun ThemeOptionCard(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    emblem: Int? = null,
-    onClick: () -> Unit
-) {
-    OptionCard(
-        title = title,
-        subtitle = subtitle,
-        selected = selected,
-        emblem = emblem,
-        onClick = onClick
-    )
-}
+// ======================== Top-level settings button ========================
 
 @Composable
-private fun LanguageOptionCard(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    OptionCard(title = title, subtitle = subtitle, selected = selected, onClick = onClick)
-}
-
-@Composable
-private fun OptionCard(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    emblem: Int? = null,
-    onClick: () -> Unit
-) {
+private fun SettingsButton(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(IOSDesign.CardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = IOSDesign.CardElevation)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (emblem != null) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = emblem),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                )
-                Spacer(modifier = Modifier.size(12.dp))
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
-            Column(modifier = Modifier.fillMaxWidth(0.85f)) {
-                Text(
-                    text = title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
             }
-            Spacer(modifier = Modifier.size(8.dp))
-            if (selected) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                RadioButton(
-                    selected = false,
-                    onClick = onClick,
-                    colors = RadioButtonDefaults.colors(
-                        unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                )
-            }
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
         }
     }
+}
+
+// ======================== Theme dialog ========================
+
+@Composable
+private fun ThemeDialog(current: AppTheme, onSelect: (AppTheme) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Тема оформлення", "Theme")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ThemeOptionRow(tr("Стандартна", "Default"), selected = current == AppTheme.DEFAULT) { onSelect(AppTheme.DEFAULT) }
+                ThemeOptionRow("OlegSmile", selected = current == AppTheme.OLEG_SMILE, emblem = R.drawable.oleg_smile_emblem) { onSelect(AppTheme.OLEG_SMILE) }
+                ThemeOptionRow("OlegSmile v2", selected = current == AppTheme.OLEG_SMILE_V2, emblem = R.drawable.oleg_smile_emblem) { onSelect(AppTheme.OLEG_SMILE_V2) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Готово", "Done")) } }
+    )
+}
+
+@Composable
+private fun ThemeOptionRow(title: String, selected: Boolean, emblem: Int? = null, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (emblem != null) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = emblem),
+                contentDescription = null,
+                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(18.dp))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+// ======================== Language dialog ========================
+
+@Composable
+private fun LanguageDialog(current: AppLanguage, onSelect: (AppLanguage) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Мова інтерфейсу", "App language")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LangRow("Українська", selected = current == AppLanguage.UA) { onSelect(AppLanguage.UA) }
+                LangRow("English", selected = current == AppLanguage.EN) { onSelect(AppLanguage.EN) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Готово", "Done")) } }
+    )
+}
+
+@Composable
+private fun LangRow(title: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+// ======================== Data dialog ========================
+
+@Composable
+private fun DataDialog(onImport: () -> Unit, onExport: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Дані", "Data")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { onImport(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Outlined.Publish, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(tr("Імпорт з Excel", "Import from Excel"))
+                }
+                Button(onClick = { onExport(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Outlined.ImportExport, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(tr("Експорт в Excel", "Export to Excel"))
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Закрити", "Close")) } }
+    )
+}
+
+// ======================== Fonts dialog ========================
+
+@Composable
+private fun FontsDialog(settings: SettingsManager, onDismiss: () -> Unit) {
+    var fontSize by settings.fontSizeState
+    var fontFamily by settings.fontFamilyState
+    var fontColor by settings.fontColorState
+
+    val families = listOf("system", "serif", "sans-serif", "monospace")
+    val colors = listOf(
+        "" to tr("За замовчуванням", "Default"),
+        "FFFFFF" to tr("Білий", "White"),
+        "000000" to tr("Чорний", "Black"),
+        "FFD700" to tr("Золотий", "Gold"),
+        "007AFF" to tr("Синій", "Blue"),
+        "34C759" to tr("Зелений", "Green")
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Шрифти", "Fonts")) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Size
+                Text(tr("Розмір шрифту: ${fontSize}sp", "Font size: ${fontSize}sp"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Slider(
+                    value = fontSize.toFloat(),
+                    onValueChange = { settings.fontSize = it.toInt() },
+                    valueRange = SettingsManager.MIN_FONT_SIZE.toFloat()..SettingsManager.MAX_FONT_SIZE.toFloat(),
+                    steps = (SettingsManager.MAX_FONT_SIZE - SettingsManager.MIN_FONT_SIZE) - 1
+                )
+                Text(
+                    tr("Рекомендовано 14–16sp для зручного читання", "Recommended 14–16sp for comfortable reading"),
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+                // Family
+                Text(tr("Тип шрифту", "Font type"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                families.forEach { family ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { settings.fontFamily = family }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(family, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                        RadioButton(
+                            selected = fontFamily == family,
+                            onClick = { settings.fontFamily = family },
+                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+                Text(
+                    tr("Рекомендація: system — найбільш читабельний на вашому пристрої",
+                        "Recommendation: system — most readable on your device"),
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+                // Color
+                Text(tr("Колір тексту", "Text color"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                colors.forEach { (hex, label) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { settings.fontColor = hex }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (hex.isNotBlank()) {
+                            Box(
+                                modifier = Modifier.size(20.dp).clip(CircleShape)
+                                    .background(Color(android.graphics.Color.parseColor("#$hex")))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                        RadioButton(
+                            selected = fontColor == hex,
+                            onClick = { settings.fontColor = hex },
+                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Готово", "Done")) } }
+    )
+}
+
+// ======================== Background image dialog ========================
+
+@Composable
+private fun BackgroundImageDialog(currentPath: String, onPickImage: () -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Фоновий малюнок", "Background image")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (currentPath.isNotBlank()) {
+                    Text(
+                        tr("Поточний: встановлено", "Current: set"),
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                } else {
+                    Text(
+                        tr("Фон не вибрано", "No background set"),
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+                Button(onClick = { onPickImage(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.Image, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(tr("Вибрати зображення…", "Choose image…"))
+                }
+                if (currentPath.isNotBlank()) {
+                    OutlinedButton(onClick = { onRemove(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                        Text(tr("Видалити фон", "Remove background"))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Закрити", "Close")) } }
+    )
 }

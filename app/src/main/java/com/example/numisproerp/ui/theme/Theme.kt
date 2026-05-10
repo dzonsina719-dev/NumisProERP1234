@@ -78,6 +78,25 @@ private val OlegSmileColorScheme = darkColorScheme(
     onError = Color(0xFF0B0B0D)
 )
 
+private val OlegSmileV2ColorScheme = darkColorScheme(
+    primary = OlegGold,
+    onPrimary = Color(0xFF121212),
+    primaryContainer = OlegV2PrimaryContainer,
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    secondary = Color(0xFFBBBBBB),
+    onSecondary = Color(0xFF121212),
+    tertiary = Color(0xFF999999),
+    onTertiary = Color(0xFF121212),
+    background = OlegV2Background,
+    onBackground = OlegV2OnSurface,
+    surface = OlegV2Surface,
+    onSurface = OlegV2OnSurface,
+    surfaceVariant = OlegV2SurfaceVariant,
+    onSurfaceVariant = OlegV2OnSurfaceVariant,
+    error = OlegRed,
+    onError = Color(0xFF121212)
+)
+
 private val IOSShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -94,6 +113,7 @@ fun NumisProERPTheme(
 ) {
     val colorScheme = when (appTheme) {
         AppTheme.OLEG_SMILE -> OlegSmileColorScheme
+        AppTheme.OLEG_SMILE_V2 -> OlegSmileV2ColorScheme
         AppTheme.DEFAULT -> if (darkTheme) DarkColorScheme else LightColorScheme
     }
 
@@ -103,31 +123,46 @@ fun NumisProERPTheme(
             typography = Typography,
             shapes = IOSShapes
         ) {
-            if (appTheme == AppTheme.OLEG_SMILE) {
-                Box(modifier = Modifier.fillMaxSize().background(OlegBackgroundSolid)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.oleg_smile_background),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color(0xAA000000),
-                                        Color(0x99000000),
-                                        Color(0xAA000000)
+            when (appTheme) {
+                AppTheme.OLEG_SMILE -> {
+                    Box(modifier = Modifier.fillMaxSize().background(OlegBackgroundSolid)) {
+                        Image(
+                            painter = painterResource(id = R.drawable.oleg_smile_background),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xAA000000),
+                                            Color(0x99000000),
+                                            Color(0xAA000000)
+                                        )
                                     )
                                 )
-                            )
-                    )
+                        )
+                        content()
+                    }
+                }
+                AppTheme.OLEG_SMILE_V2 -> {
+                    Box(modifier = Modifier.fillMaxSize().background(OlegV2BackgroundSolid)) {
+                        Image(
+                            painter = painterResource(id = R.drawable.oleg_smile_background),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.15f
+                        )
+                        content()
+                    }
+                }
+                else -> {
                     content()
                 }
-            } else {
-                content()
             }
         }
     }
