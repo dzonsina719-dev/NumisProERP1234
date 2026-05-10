@@ -123,8 +123,21 @@ fun HistoryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
+                // Першим чіпом — «Всі» (null), далі окремі типи. Радіо-стиль:
+                // одночасно активний рівно один фільтр.
+                item {
+                    FilterChip(
+                        selected = uiState.selectedType == null,
+                        onClick = { viewModel.selectType(null) },
+                        label = { Text(tr("Всі", "All")) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
                 items(HistoryEntryType.values().toList()) { type ->
-                    val selected = type in uiState.selectedTypes
+                    val selected = uiState.selectedType == type
                     val typeLabel = when (type) {
                         HistoryEntryType.PURCHASE -> tr("Закупівля", "Purchase")
                         HistoryEntryType.SALE -> tr("Продаж", "Sale")
@@ -133,7 +146,7 @@ fun HistoryScreen(
                     }
                     FilterChip(
                         selected = selected,
-                        onClick = { viewModel.toggleType(type) },
+                        onClick = { viewModel.selectType(type) },
                         label = { Text(typeLabel) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),

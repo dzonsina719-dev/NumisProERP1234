@@ -59,7 +59,7 @@ class NotesViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAddDialog = false, editingNote = null, errorMessage = "")
     }
 
-    fun saveNote(title: String, text: String, reminderDate: Long?) {
+    fun saveNote(title: String, text: String, reminderDate: Long?, attachments: String = "") {
         if (title.isBlank()) {
             _uiState.value = _uiState.value.copy(errorMessage = "Введіть заголовок")
             return
@@ -73,7 +73,8 @@ class NotesViewModel @Inject constructor(
                     text = text.trim(),
                     reminderDate = reminderDate,
                     isCompleted = false,
-                    createdAt = System.currentTimeMillis()
+                    createdAt = System.currentTimeMillis(),
+                    attachments = attachments
                 )
                 repository.insertNote(newNote)
                 newNote
@@ -81,7 +82,8 @@ class NotesViewModel @Inject constructor(
                 val updated = editing.copy(
                     title = title.trim(),
                     text = text.trim(),
-                    reminderDate = reminderDate
+                    reminderDate = reminderDate,
+                    attachments = attachments
                 )
                 repository.updateNote(updated)
                 updated

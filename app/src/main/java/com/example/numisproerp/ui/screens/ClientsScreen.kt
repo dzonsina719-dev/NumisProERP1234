@@ -66,6 +66,10 @@ import androidx.navigation.NavHostController
 import com.numisproerp.data.dao.ClientWithBalance
 import com.numisproerp.ui.i18n.tr
 import com.numisproerp.data.dao.SaleWithProductName
+import com.numisproerp.ui.components.DateRangeFilterRow
+import com.numisproerp.ui.components.DayGroupCard
+import com.numisproerp.ui.components.HistoryRecord
+import com.numisproerp.ui.components.groupHistoryByDay
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
 import com.numisproerp.ui.theme.AccentOrange
@@ -99,6 +103,9 @@ fun ClientsScreen(
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var clientToDelete by remember { mutableStateOf<ClientWithBalance?>(null) }
+
+    var historyStart by remember { mutableStateOf<Long?>(null) }
+    var historyEnd by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadClients()
@@ -392,8 +399,46 @@ fun ClientsScreen(
                                             fontSize = 14.sp
                                         )
 
-                                        uiState.purchaseHistory.forEach { sale ->
-                                            SaleHistoryItem(sale = sale)
+                                        DateRangeFilterRow(
+                                            startMillis = historyStart,
+                                            endMillis = historyEnd,
+                                            onChange = { s, e ->
+                                                historyStart = s
+                                                historyEnd = e
+                                            }
+                                        )
+
+                                        val records = uiState.purchaseHistory
+                                            .filter { s ->
+                                                (historyStart?.let { s.date >= it } ?: true) &&
+                                                    (historyEnd?.let { s.date <= it } ?: true)
+                                            }
+                                            .map { s ->
+                                                HistoryRecord(
+                                                    date = s.date,
+                                                    productName = s.productName,
+                                                    quantity = s.quantity,
+                                                    totalAmount = s.totalAmount
+                                                )
+                                            }
+                                        val grouped = groupHistoryByDay(records)
+                                        if (grouped.isEmpty()) {
+                                            Text(
+                                                text = tr(
+                                                    "Немає записів у вибраному діапазоні",
+                                                    "No records in selected range"
+                                                ),
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        } else {
+                                            grouped.forEach { (day, items) ->
+                                                DayGroupCard(
+                                                    day = day,
+                                                    records = items,
+                                                    summaryColor = AccentGreen
+                                                )
+                                            }
                                         }
                                     }
                                 }

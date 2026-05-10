@@ -38,7 +38,7 @@ import com.numisproerp.data.entities.Note
         CollectionItem::class,
         Note::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -129,6 +129,15 @@ abstract class AppDatabase : RoomDatabase() {
                             PRIMARY KEY(`noteId`)
                         )
                         """.trimIndent()
+                    )
+                }
+            },
+            // 14 → 15: додано колонку attachments до notes для прикріплення
+            // PDF/Excel-файлів (зберігається як `name|uri\nname|uri`).
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE `notes` ADD COLUMN `attachments` TEXT NOT NULL DEFAULT ''"
                     )
                 }
             }

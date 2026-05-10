@@ -2,6 +2,12 @@ package com.numisproerp.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,11 +30,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -62,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.numisproerp.data.entities.Note
+import com.numisproerp.data.entities.NoteAttachment
 import com.numisproerp.data.settings.SettingsManager
 import com.numisproerp.di.SettingsManagerEntryPoint
 import com.numisproerp.ui.components.NotificationSettingsDialog
@@ -194,8 +205,8 @@ fun MyNotesScreen(
             initial = uiState.editingNote,
             errorMessage = uiState.errorMessage,
             onDismiss = { viewModel.closeDialog() },
-            onSave = { title, text, reminderDate ->
-                viewModel.saveNote(title, text, reminderDate)
+            onSave = { title, text, reminderDate, attachments ->
+                viewModel.saveNote(title, text, reminderDate, attachments)
             }
         )
     }
@@ -292,6 +303,17 @@ private fun NoteCard(
                 }
             }
 
+            val attachments = remember(note.attachments) { NoteAttachment.parseAll(note.attachments) }
+            if (attachments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier.padding(start = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    attachments.forEach { att -> NoteAttachmentChip(att) }
+                }
+            }
+
             if (note.reminderDate != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
@@ -333,17 +355,88 @@ private fun NoteCard(
     }
 }
 
+/**
+ * Компактна «чіп»-панель вкладення в карточці замітки. Натиск — відкриває
+ * файл через ACTION_VIEW (вбудований переглядач PDF/Excel або «відкрити за допомогою»).
+ */
+@Composable
+private fun NoteAttachmentChip(att: NoteAttachment) {
+    val context = LocalContext.current
+    val cantOpenText = tr("Не вдалося відкрити файл", "Could not open file")
+    val isPdf = att.name.lowercase(Locale.getDefault()).endsWith(".pdf")
+    val isExcel = att.name.lowercase(Locale.getDefault()).let { n ->
+        n.endsWith(".xls") || n.endsWith(".xlsx") || n.endsWith(".csv")
+    }
+    val icon = when {
+        isPdf -> Icons.Default.PictureAsPdf
+        isExcel -> Icons.Default.TableChart
+        else -> Icons.Default.Description
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                try {
+                    val uri = Uri.parse(att.uri)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, cantOpenText, Toast.LENGTH_SHORT).show()
+                }
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = AccentBlue
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = att.name,
+            fontSize = 12.sp,
+            color = AccentBlue,
+            maxLines = 1
+        )
+    }
+}
+
 @Composable
 private fun AddOrEditNoteDialog(
     initial: Note?,
     errorMessage: String,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long?) -> Unit
+    onSave: (String, String, Long?, String) -> Unit
 ) {
     val context = LocalContext.current
     var title by remember(initial) { mutableStateOf(initial?.title ?: "") }
     var text by remember(initial) { mutableStateOf(initial?.text ?: "") }
     var reminderDate by remember(initial) { mutableStateOf(initial?.reminderDate) }
+    var attachments by remember(initial) {
+        mutableStateOf(NoteAttachment.parseAll(initial?.attachments ?: ""))
+    }
+
+    val attachmentPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                // Беремо персистентний дозвіл на читання, щоб URI працював після рестарту.
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Деякі провайдери не дозволяють тримати дозвіл — продовжуємо без нього.
+            }
+            val name = queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "file"
+            attachments = attachments + NoteAttachment(name = name, uri = uri.toString())
+        }
+    }
 
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
 
@@ -453,6 +546,65 @@ private fun AddOrEditNoteDialog(
                     Text(tr("Встановити нагадування", "Set reminder"))
                 }
 
+                // Секція вкладень.
+                if (attachments.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        attachments.forEachIndexed { index, att ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = AccentBlue
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = att.name,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1
+                                )
+                                IconButton(
+                                    onClick = {
+                                        attachments = attachments.toMutableList().also { it.removeAt(index) }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = tr("Видалити", "Remove"),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        // PDF + Excel (xls, xlsx) + CSV. `*/*` як safety для деяких провайдерів.
+                        attachmentPicker.launch(
+                            arrayOf(
+                                "application/pdf",
+                                "application/vnd.ms-excel",
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "text/csv"
+                            )
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+                ) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(tr("Прикріпити файл (PDF, Excel)", "Attach file (PDF, Excel)"))
+                }
+
                 if (errorMessage.isNotEmpty()) {
                     Text(
                         text = errorMessage,
@@ -464,7 +616,9 @@ private fun AddOrEditNoteDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSave(title, text, reminderDate) },
+                onClick = {
+                    onSave(title, text, reminderDate, NoteAttachment.serializeAll(attachments))
+                },
                 shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
             ) {
                 Text(tr("Зберегти", "Save"))
@@ -477,3 +631,20 @@ private fun AddOrEditNoteDialog(
         }
     )
 }
+
+/**
+ * Витягує відображуване ім'я файлу з SAF Uri (DocumentsProvider). Якщо
+ * провайдер не повертає DISPLAY_NAME — повертаємо `null`, щоб викликаюча сторона
+ * могла фолбекнутися на lastPathSegment.
+ */
+private fun queryDisplayName(context: android.content.Context, uri: Uri): String? {
+    return try {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
