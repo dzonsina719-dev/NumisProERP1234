@@ -177,11 +177,16 @@ fun SettingsScreen(
             scope.launch {
                 val target = File(context.filesDir, "custom_bg.jpg")
                 try {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        FileOutputStream(target).use { output -> input.copyTo(output) }
+                    val stream = context.contentResolver.openInputStream(uri)
+                    if (stream != null) {
+                        stream.use { input ->
+                            FileOutputStream(target).use { output -> input.copyTo(output) }
+                        }
+                        settings.backgroundImagePath = target.absolutePath
+                        Toast.makeText(context, bgSetText, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, bgErrorText, Toast.LENGTH_SHORT).show()
                     }
-                    settings.backgroundImagePath = target.absolutePath
-                    Toast.makeText(context, bgSetText, Toast.LENGTH_SHORT).show()
                 } catch (_: Exception) {
                     Toast.makeText(context, bgErrorText, Toast.LENGTH_SHORT).show()
                 }
