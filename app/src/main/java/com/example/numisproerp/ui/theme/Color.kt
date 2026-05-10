@@ -75,3 +75,16 @@ val OlegRed = Color(0xFFE57373)
 val OlegGreen = Color(0xFF7FCB7F)
 val OlegOrange = Color(0xFFE5A54A)
 val OlegBlue = Color(0xFF6FA8DC)
+
+// =============================================================================
+// OlegSmile v2: темна тема, але без золотих/коричневих відтінків у тексті і панелях.
+// Текст — білий/сірий, панелі — нейтрально-темні, як Samsung One UI dark mode.
+// Емблема і значки залишаються тими самими.
+// =============================================================================
+val OlegV2Background = Color(0x00000000)
+val OlegV2BackgroundSolid = Color(0xFF121212)
+val OlegV2Surface = Color(0xCC1E1E1E)
+val OlegV2SurfaceVariant = Color(0xCC2A2A2A)
+val OlegV2PrimaryContainer = Color(0xCC2C2C2C)
+val OlegV2OnSurface = Color(0xFFFFFFFF)
+val OlegV2OnSurfaceVariant = Color(0xFFB0B0B0)
