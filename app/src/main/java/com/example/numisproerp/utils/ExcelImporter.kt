@@ -37,10 +37,17 @@ class ExcelImporter(
             material: String,
             category: String,
             issueDate: String,
-            quality: String
+            quality: String,
+            diameter: String = "",
+            weight: String = "",
+            mintageAnnounced: String = "",
+            artist: String = "",
+            sculptor: String = ""
         ): String {
-            val signature = listOf(name, series, nominal, material, category, issueDate, quality)
-                .joinToString(separator = "\u0001") { it.trim().lowercase(Locale.ROOT) }
+            val signature = listOf(
+                name, series, nominal, material, category, issueDate, quality,
+                diameter, weight, mintageAnnounced, artist, sculptor
+            ).joinToString(separator = "\u0001") { it.trim().lowercase(Locale.ROOT) }
             val digest = MessageDigest.getInstance("MD5").digest(signature.toByteArray(Charsets.UTF_8))
             val hex = digest.joinToString(separator = "") { "%02x".format(it) }
             return "AUTO_${hex.substring(0, 16)}"
@@ -162,7 +169,13 @@ class ExcelImporter(
                         val sculptor = row.getCell(12)?.toString() ?: ""
                         val catalogId = if (rawCatalogId.isBlank()) {
                             productsAutoIdCount++
-                            generateAutoCatalogId(nameValue, series, nominal, material, category, issueDate, quality)
+                            // Для legacy-формату (13 колонок) включаємо diameter, weight,
+                            // mintageAnnounced, artist, sculptor у хеш, щоб рядки, які відрізняються
+                            // лише цими полями, не колідували.
+                            generateAutoCatalogId(
+                                nameValue, series, nominal, material, category, issueDate, quality,
+                                diameter, weight, mintageAnnounced, artist, sculptor
+                            )
                         } else {
                             rawCatalogId
                         }
