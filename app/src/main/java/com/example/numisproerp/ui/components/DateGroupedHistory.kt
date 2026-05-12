@@ -1,6 +1,5 @@
 package com.numisproerp.ui.components
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,16 +15,24 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DisplayMode
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +43,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Запис історії, незалежний від типу: дата, кількість, сума, ім'я товару.
@@ -89,15 +97,43 @@ fun endOfDay(timestamp: Long): Long {
  * Рядок-фільтр часового діапазону з двома кнопками (Від / До) та хрестиком
  * скидання. Передає батьківському компоненту обрані `startMillis` та `endMillis`
  * (включно). `null` означає «без обмеження» по відповідному боці.
+ *
+ * Використовує Material3 Compose `DatePicker` з явним перемикачем року і місяців,
+ * щоб давав обирати будь-який рік (в тому числі майбутній) — не native
+ * спіннер-варіант Android DatePickerDialog, в якому на деяких прошивках важко
+ * вибрати дистантний день.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateRangeFilterRow(
     startMillis: Long?,
     endMillis: Long?,
     onChange: (Long?, Long?) -> Unit
 ) {
-    val context = LocalContext.current
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+    var showFromPicker by remember { mutableStateOf(false) }
+    var showToPicker by remember { mutableStateOf(false) }
+
+    if (showFromPicker) {
+        DateChooserDialog(
+            initialMillis = startMillis,
+            onDismiss = { showFromPicker = false },
+            onConfirm = { picked ->
+                onChange(startOfDay(picked), endMillis)
+                showFromPicker = false
+            }
+        )
+    }
+    if (showToPicker) {
+        DateChooserDialog(
+            initialMillis = endMillis,
+            onDismiss = { showToPicker = false },
+            onConfirm = { picked ->
+                onChange(startMillis, endOfDay(picked))
+                showToPicker = false
+            }
+        )
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -105,21 +141,7 @@ fun DateRangeFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedButton(
-            onClick = {
-                val cal = Calendar.getInstance().apply {
-                    timeInMillis = startMillis ?: System.currentTimeMillis()
-                }
-                DatePickerDialog(
-                    context,
-                    { _, year, month, day ->
-                        val picked = Calendar.getInstance().apply { set(year, month, day) }
-                        onChange(startOfDay(picked.timeInMillis), endMillis)
-                    },
-                    cal.get(Calendar.YEAR),
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)
-                ).show()
-            },
+            onClick = { showFromPicker = true },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
             modifier = Modifier.weight(1f)
         ) {
@@ -133,21 +155,7 @@ fun DateRangeFilterRow(
             )
         }
         OutlinedButton(
-            onClick = {
-                val cal = Calendar.getInstance().apply {
-                    timeInMillis = endMillis ?: System.currentTimeMillis()
-                }
-                DatePickerDialog(
-                    context,
-                    { _, year, month, day ->
-                        val picked = Calendar.getInstance().apply { set(year, month, day) }
-                        onChange(startMillis, endOfDay(picked.timeInMillis))
-                    },
-                    cal.get(Calendar.YEAR),
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)
-                ).show()
-            },
+            onClick = { showToPicker = true },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
             modifier = Modifier.weight(1f)
         ) {
@@ -259,6 +267,52 @@ fun DayGroupCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Material3 Compose DatePicker у власному діалозі. Дозволяє вибрати **будь-яку**
+ * дату (минулу або майбутню) — діапазон років `1900..2100`. На відміну від
+ * native `android.app.DatePickerDialog`, що на деяких прошивках падає у
+ * спіннер-режим з обмеженим вибором.
+ *
+ * Час повертається у мс **локального часового поясу** (00:00 цього дня).
+ * Подальша нормалізація (startOfDay/endOfDay) робиться у викликаючому коді.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateChooserDialog(
+    initialMillis: Long?,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initialMillis ?: System.currentTimeMillis(),
+        yearRange = 1900..2100,
+        initialDisplayMode = DisplayMode.Picker
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                val utc = state.selectedDateMillis
+                if (utc != null) {
+                    // Material3 повертає UTC-мс ОБРАНОЇ КАЛЕНДАРНОЇ ДАТИ (00:00 UTC).
+                    // Конвертуємо у мс локального часового поясу того ж дня,
+                    // щоб `startOfDay`/`endOfDay` коректно його зрізали.
+                    val tz = TimeZone.getDefault()
+                    val local = utc - tz.getOffset(utc)
+                    onConfirm(local)
+                } else {
+                    onDismiss()
+                }
+            }) { Text(tr("Готово", "OK")) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(tr("Скасувати", "Cancel")) }
+        }
+    ) {
+        DatePicker(state = state)
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.numisproerp.data.dao.BundleDao
 import com.numisproerp.data.dao.CatalogDao
 import com.numisproerp.data.dao.ClientDao
 import com.numisproerp.data.dao.OtherExpenseDao
@@ -14,6 +15,8 @@ import com.numisproerp.data.dao.SupplierDao
 import com.numisproerp.data.dao.WriteoffDao
 import com.numisproerp.data.dao.CollectionItemDao
 import com.numisproerp.data.dao.NoteDao
+import com.numisproerp.data.entities.Bundle
+import com.numisproerp.data.entities.BundleComponent
 import com.numisproerp.data.entities.CatalogItem
 import com.numisproerp.data.entities.Client
 import com.numisproerp.data.entities.OtherExpense
@@ -36,9 +39,11 @@ import com.numisproerp.data.entities.Note
         CatalogItem::class,
         Writeoff::class,
         CollectionItem::class,
-        Note::class
+        Note::class,
+        Bundle::class,
+        BundleComponent::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -52,6 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun writeoffDao(): WriteoffDao
     abstract fun collectionItemDao(): CollectionItemDao
     abstract fun noteDao(): NoteDao
+    abstract fun bundleDao(): BundleDao
 
     companion object {
         /**
@@ -147,6 +153,45 @@ abstract class AppDatabase : RoomDatabase() {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         "ALTER TABLE `collection_items` ADD COLUMN `sourceUrl` TEXT NOT NULL DEFAULT ''"
+                    )
+                }
+            },
+            // 16 → 17: додано «Моя збірка» — таблиця bundles + bundle_components.
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `bundles` (
+                            `bundleId` TEXT NOT NULL,
+                            `name` TEXT NOT NULL,
+                            `assembledDate` INTEGER NOT NULL,
+                            `totalCost` REAL NOT NULL,
+                            `suggestedPrice` REAL NOT NULL,
+                            `photoPath` TEXT NOT NULL,
+                            `comment` TEXT NOT NULL,
+                            PRIMARY KEY(`bundleId`)
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `bundle_components` (
+                            `bundleComponentId` TEXT NOT NULL,
+                            `bundleId` TEXT NOT NULL,
+                            `componentCatalogId` TEXT NOT NULL,
+                            `quantity` INTEGER NOT NULL,
+                            `unitCost` REAL NOT NULL,
+                            PRIMARY KEY(`bundleComponentId`),
+                            FOREIGN KEY(`bundleId`) REFERENCES `bundles`(`bundleId`)
+                                ON UPDATE NO ACTION ON DELETE CASCADE
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_bundle_components_bundleId` ON `bundle_components` (`bundleId`)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_bundle_components_componentCatalogId` ON `bundle_components` (`componentCatalogId`)"
                     )
                 }
             }

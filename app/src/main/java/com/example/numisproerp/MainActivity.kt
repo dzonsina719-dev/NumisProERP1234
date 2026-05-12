@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
@@ -162,6 +163,7 @@ fun NumisProERPNavigation() {
         DrawerItem(tr("Додати товар", "Add product"), Screen.Purchase.route, false, Icons.Default.Add),
         DrawerItem(tr("Товари", "Products"), Screen.Products.route, false, Icons.Outlined.Inventory2),
         DrawerItem(tr("Мої замітки", "My Notes"), Screen.MyNotes.route, false, Icons.Outlined.Edit),
+        DrawerItem(tr("Моя збірка", "My Bundle"), Screen.MyBundle.route, false, Icons.Default.Build),
         DrawerItem(tr("Історія продажів", "Sales History"), Screen.SalesHistory.route, false, Icons.Outlined.Sell),
         DrawerItem(tr("Документи", "Documents"), Screen.Documents.route, false, Icons.Outlined.Description),
         DrawerItem(tr("Витрати", "Expenses"), Screen.Expenses.route, false, Icons.Outlined.Receipt),
