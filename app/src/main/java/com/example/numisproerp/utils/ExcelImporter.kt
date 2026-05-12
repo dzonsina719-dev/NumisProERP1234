@@ -15,12 +15,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.InputStream
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 class ExcelImporter(
     private val database: AppDatabase
 ) {
+
+    companion object {
+        /**
+         * Генерує детермінований CatalogID для рядків імпорту без власного ID.
+         * Формат: "AUTO_<16-симв. hex>", де hex — перші 64 біти MD5 від об’єднаних
+         * нормалізованих полів. Через детермінованість повторний імпорт того ж рядка
+         * дає той самий ID, тому upsert (PK REPLACE) працює, а не дублює.
+         */
+        internal fun generateAutoCatalogId(
+            name: String,
+            series: String,
+            nominal: String,
+            material: String,
+            category: String,
+            issueDate: String,
+            quality: String,
+            diameter: String = "",
+            weight: String = "",
+            mintageAnnounced: String = "",
+            artist: String = "",
+            sculptor: String = ""
+        ): String {
+            val signature = listOf(
+                name, series, nominal, material, category, issueDate, quality,
+                diameter, weight, mintageAnnounced, artist, sculptor
+            ).joinToString(separator = "\u0001") { it.trim().lowercase(Locale.ROOT) }
+            val digest = MessageDigest.getInstance("MD5").digest(signature.toByteArray(Charsets.UTF_8))
+            val hex = digest.joinToString(separator = "") { "%02x".format(it) }
+            return "AUTO_${hex.substring(0, 16)}"
+        }
+    }
 
     data class ImportResult(
         val success: Boolean,
@@ -85,7 +117,6 @@ class ExcelImporter(
                     .equals("PhotoPath", ignoreCase = true)
 
                 val products = mutableListOf<Product>()
-                val importTimestamp = System.currentTimeMillis()
                 for (rowIndex in 1 until productSheet.physicalNumberOfRows) {
                     val row = productSheet.getRow(rowIndex) ?: continue
                     val rawCatalogId = row.getCell(0)?.toString()?.trim() ?: ""
@@ -97,42 +128,71 @@ class ExcelImporter(
                         continue
                     }
 
-                    // Якщо ID порожній, але є назва — авто-генеруємо унікальний ID.
-                    // Базуємо на номері рядка + timestamp, щоб не конфліктувати з існуючими.
-                    val catalogId = if (rawCatalogId.isBlank()) {
-                        productsAutoIdCount++
-                        "AUTO_${importTimestamp}_$rowIndex"
-                    } else {
-                        rawCatalogId
-                    }
-
                     val product = if (isNewFormat) {
+                        val series = row.getCell(2)?.toString() ?: ""
+                        val material = row.getCell(3)?.toString() ?: ""
+                        val nominal = row.getCell(4)?.toString() ?: ""
+                        val category = row.getCell(5)?.toString() ?: ""
+                        val issueDate = row.getCell(6)?.toString() ?: ""
+                        val quality = row.getCell(7)?.toString() ?: ""
+                        val photoPath = row.getCell(8)?.toString() ?: ""
+                        val catalogId = if (rawCatalogId.isBlank()) {
+                            productsAutoIdCount++
+                            // Детермінований ID: MD5-хеш від контенту рядка. Повторний імпорт
+                            // того ж файлу дасть той самий ID → upsert замість дублікату.
+                            generateAutoCatalogId(nameValue, series, nominal, material, category, issueDate, quality)
+                        } else {
+                            rawCatalogId
+                        }
                         Product(
                             catalogId = catalogId,
                             name = nameValue,
-                            series = row.getCell(2)?.toString() ?: "",
-                            material = row.getCell(3)?.toString() ?: "",
-                            nominal = row.getCell(4)?.toString() ?: "",
-                            category = row.getCell(5)?.toString() ?: "",
-                            issueDate = row.getCell(6)?.toString() ?: "",
-                            quality = row.getCell(7)?.toString() ?: "",
-                            photoPath = row.getCell(8)?.toString() ?: ""
+                            series = series,
+                            material = material,
+                            nominal = nominal,
+                            category = category,
+                            issueDate = issueDate,
+                            quality = quality,
+                            photoPath = photoPath
                         )
                     } else {
+                        val series = row.getCell(2)?.toString() ?: ""
+                        val issueDate = row.getCell(3)?.toString() ?: ""
+                        val material = row.getCell(4)?.toString() ?: ""
+                        val nominal = row.getCell(5)?.toString() ?: ""
+                        val diameter = row.getCell(6)?.toString() ?: ""
+                        val weight = row.getCell(7)?.toString() ?: ""
+                        val mintageAnnounced = row.getCell(8)?.toString() ?: ""
+                        val category = row.getCell(9)?.toString() ?: ""
+                        val quality = row.getCell(10)?.toString() ?: ""
+                        val artist = row.getCell(11)?.toString() ?: ""
+                        val sculptor = row.getCell(12)?.toString() ?: ""
+                        val catalogId = if (rawCatalogId.isBlank()) {
+                            productsAutoIdCount++
+                            // Для legacy-формату (13 колонок) включаємо diameter, weight,
+                            // mintageAnnounced, artist, sculptor у хеш, щоб рядки, які відрізняються
+                            // лише цими полями, не колідували.
+                            generateAutoCatalogId(
+                                nameValue, series, nominal, material, category, issueDate, quality,
+                                diameter, weight, mintageAnnounced, artist, sculptor
+                            )
+                        } else {
+                            rawCatalogId
+                        }
                         Product(
                             catalogId = catalogId,
                             name = nameValue,
-                            series = row.getCell(2)?.toString() ?: "",
-                            issueDate = row.getCell(3)?.toString() ?: "",
-                            material = row.getCell(4)?.toString() ?: "",
-                            nominal = row.getCell(5)?.toString() ?: "",
-                            diameter = row.getCell(6)?.toString() ?: "",
-                            weight = row.getCell(7)?.toString() ?: "",
-                            mintageAnnounced = row.getCell(8)?.toString() ?: "",
-                            category = row.getCell(9)?.toString() ?: "",
-                            quality = row.getCell(10)?.toString() ?: "",
-                            artist = row.getCell(11)?.toString() ?: "",
-                            sculptor = row.getCell(12)?.toString() ?: "",
+                            series = series,
+                            issueDate = issueDate,
+                            material = material,
+                            nominal = nominal,
+                            diameter = diameter,
+                            weight = weight,
+                            mintageAnnounced = mintageAnnounced,
+                            category = category,
+                            quality = quality,
+                            artist = artist,
+                            sculptor = sculptor,
                             photoPath = ""
                         )
                     }
