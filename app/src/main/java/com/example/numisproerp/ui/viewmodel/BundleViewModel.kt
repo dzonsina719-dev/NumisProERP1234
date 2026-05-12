@@ -193,10 +193,11 @@ class BundleViewModel @Inject constructor(
             val now = System.currentTimeMillis()
             val totalCost = state.draftTotalCost
             val suggestedPrice = state.draftSuggestedPrice.replace(",", ".").toDoubleOrNull() ?: 0.0
+            val bundleCatalogId = "BUNDLE_$bundleId"
 
-            // 1) Списання кожного компонента (стандартний механізм складу).
-            state.draftComponents.forEach { c ->
-                val writeoff = Writeoff(
+            // Готуємо всі сутності, які треба записати атомарно.
+            val writeoffs = state.draftComponents.map { c ->
+                Writeoff(
                     writeoffId = "WO_BUNDLE_${bundleId}_${c.catalogId}",
                     date = now,
                     catalogId = c.catalogId,
@@ -206,19 +207,12 @@ class BundleViewModel @Inject constructor(
                     reason = "Збірка",
                     comment = "Збірка: $name"
                 )
-                repository.insertWriteoff(writeoff)
             }
-
-            // 2) Нова готова продукція як Product.
-            val bundleCatalogId = "BUNDLE_$bundleId"
             val bundleProduct = Product(
                 catalogId = bundleCatalogId,
                 name = name,
                 category = "Збірка"
             )
-            repository.insertProduct(bundleProduct)
-
-            // 3) Purchase, щоб збірка з'явилася на складі як 1 шт. за totalCost.
             val purchase = Purchase(
                 purchaseId = "P_BUNDLE_$bundleId",
                 date = now,
@@ -229,9 +223,6 @@ class BundleViewModel @Inject constructor(
                 additionalCosts = 0.0,
                 totalAmount = totalCost
             )
-            repository.insertPurchase(purchase)
-
-            // 4) Зберігаємо саму збірку + її компоненти.
             val bundle = Bundle(
                 bundleId = bundleId,
                 name = name,
@@ -241,7 +232,6 @@ class BundleViewModel @Inject constructor(
                 photoPath = "",
                 comment = state.draftComment.trim()
             )
-            bundleDao.insertBundle(bundle)
             val components = state.draftComponents.map { c ->
                 BundleComponent(
                     bundleComponentId = "BC_${bundleId}_${c.catalogId}",
@@ -251,7 +241,17 @@ class BundleViewModel @Inject constructor(
                     unitCost = c.unitCost
                 )
             }
-            bundleDao.insertComponents(components)
+
+            // Усі 5 кроків (списання, продукт, закупівля, збірка, компоненти)
+            // виконуються в одній Room-транзакції під NonCancellable — або всі,
+            // або жоден, навіть якщо корутину скасують.
+            repository.createBundleAtomically(
+                writeoffs = writeoffs,
+                product = bundleProduct,
+                purchase = purchase,
+                bundle = bundle,
+                components = components
+            )
 
             _uiState.value = _uiState.value.copy(
                 showCreator = false,

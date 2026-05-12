@@ -20,6 +20,8 @@ import com.numisproerp.data.entities.Purchase
 import com.numisproerp.data.entities.Sale
 import com.numisproerp.data.entities.Supplier
 import com.numisproerp.data.entities.Writeoff
+import com.numisproerp.data.entities.Bundle
+import com.numisproerp.data.entities.BundleComponent
 import com.numisproerp.data.entities.CollectionItem
 import com.numisproerp.data.entities.Note
 import androidx.room.withTransaction
@@ -474,6 +476,8 @@ class Repository @Inject constructor(
     suspend fun clearAllData() = withContext(NonCancellable + Dispatchers.IO) {
         database.withTransaction {
             // Спочатку дочірні таблиці (operations), потім довідники
+            database.bundleDao().deleteAllComponents()
+            database.bundleDao().deleteAllBundles()
             database.writeoffDao().deleteAll()
             database.saleDao().deleteAll()
             database.purchaseDao().deleteAll()
@@ -483,6 +487,30 @@ class Repository @Inject constructor(
             database.productDao().deleteAll()
             database.clientDao().deleteAll()
             database.supplierDao().deleteAll()
+        }
+    }
+
+    // ==================== BUNDLES ====================
+
+    /**
+     * Атомарне створення збірки: всі операції (списання компонентів,
+     * реєстрація Product, закупівля, вставка Bundle + BundleComponent) виконуються
+     * в єдиній Room-транзакції під [NonCancellable] — їх неможливо розірвати
+     * каскадним припиненням корутини або вбивством застосунку.
+     */
+    suspend fun createBundleAtomically(
+        writeoffs: List<Writeoff>,
+        product: Product,
+        purchase: Purchase,
+        bundle: Bundle,
+        components: List<BundleComponent>
+    ) = withContext(NonCancellable + Dispatchers.IO) {
+        database.withTransaction {
+            writeoffs.forEach { database.writeoffDao().insert(it) }
+            database.productDao().insert(product)
+            database.purchaseDao().insert(purchase)
+            database.bundleDao().insertBundle(bundle)
+            database.bundleDao().insertComponents(components)
         }
     }
 }

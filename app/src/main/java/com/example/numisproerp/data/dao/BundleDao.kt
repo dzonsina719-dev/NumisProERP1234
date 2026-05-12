@@ -45,6 +45,12 @@ interface BundleDao {
     @Query("DELETE FROM bundles WHERE bundleId = :id")
     suspend fun deleteBundle(id: String)
 
+    @Query("DELETE FROM bundles")
+    suspend fun deleteAllBundles()
+
+    @Query("DELETE FROM bundle_components")
+    suspend fun deleteAllComponents()
+
     /**
      * Список збірок із агрегованими даними по продажах. Кількість одиниць
      * збірки на складі = (1 закупівля на момент створення) − sales − writeoffs.
