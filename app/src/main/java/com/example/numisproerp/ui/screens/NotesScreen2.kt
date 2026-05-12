@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import coil.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.outlined.Notifications
@@ -63,6 +65,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -97,6 +101,7 @@ fun MyNotesScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var deleteCandidate by remember { mutableStateOf<Note?>(null) }
+    var viewingNote by remember { mutableStateOf<Note?>(null) }
     var showNotificationSettings by remember { mutableStateOf(false) }
 
     val settings: SettingsManager = remember {
@@ -181,7 +186,8 @@ fun MyNotesScreen(
                             note = note,
                             onToggleCompleted = { viewModel.toggleCompleted(note) },
                             onEdit = { viewModel.openEditDialog(note) },
-                            onDelete = { deleteCandidate = note }
+                            onDelete = { deleteCandidate = note },
+                            onView = { viewingNote = note }
                         )
                     }
                 }
@@ -240,6 +246,18 @@ fun MyNotesScreen(
             }
         )
     }
+
+    val toView = viewingNote
+    if (toView != null) {
+        NoteViewerDialog(
+            note = toView,
+            onDismiss = { viewingNote = null },
+            onEdit = {
+                viewingNote = null
+                viewModel.openEditDialog(toView)
+            }
+        )
+    }
 }
 
 @Composable
@@ -247,7 +265,8 @@ private fun NoteCard(
     note: Note,
     onToggleCompleted: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onView: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
     val isOverdue = note.reminderDate != null && note.reminderDate < System.currentTimeMillis() && !note.isCompleted
@@ -278,7 +297,11 @@ private fun NoteCard(
                     checked = note.isCompleted,
                     onCheckedChange = { onToggleCompleted() }
                 )
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onView)
+                ) {
                     Text(
                         text = note.title,
                         fontSize = 15.sp,
@@ -294,6 +317,9 @@ private fun NoteCard(
                             textDecoration = if (note.isCompleted) TextDecoration.LineThrough else null
                         )
                     }
+                }
+                IconButton(onClick = onView, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Description, contentDescription = tr("Відкрити замітку", "Open note"), modifier = Modifier.size(18.dp), tint = AccentBlue)
                 }
                 IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                     Icon(Icons.Default.Edit, contentDescription = tr("Редагувати", "Edit"), modifier = Modifier.size(18.dp))
@@ -355,9 +381,16 @@ private fun NoteCard(
     }
 }
 
+/** Визначає чи є вкладення зображенням (jpg/png/webp/etc). */
+private fun NoteAttachment.isImage(): Boolean = name.lowercase(Locale.getDefault()).let { n ->
+    n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") ||
+            n.endsWith(".webp") || n.endsWith(".gif") || n.endsWith(".bmp")
+}
+
 /**
  * Компактна «чіп»-панель вкладення в карточці замітки. Натиск — відкриває
- * файл через ACTION_VIEW (вбудований переглядач PDF/Excel або «відкрити за допомогою»).
+ * файл через ACTION_VIEW (вбудований переглядач PDF/Excel/фото або «відкрити за допомогою»).
+ * Для фото показує мініатюру 36×36 dp ліворуч.
  */
 @Composable
 private fun NoteAttachmentChip(att: NoteAttachment) {
@@ -367,9 +400,11 @@ private fun NoteAttachmentChip(att: NoteAttachment) {
     val isExcel = att.name.lowercase(Locale.getDefault()).let { n ->
         n.endsWith(".xls") || n.endsWith(".xlsx") || n.endsWith(".csv")
     }
+    val isImage = att.isImage()
     val icon = when {
         isPdf -> Icons.Default.PictureAsPdf
         isExcel -> Icons.Default.TableChart
+        isImage -> Icons.Default.Image
         else -> Icons.Default.Description
     }
     Row(
@@ -389,6 +424,24 @@ private fun NoteAttachmentChip(att: NoteAttachment) {
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isImage) {
+            AsyncImage(
+                model = att.uri,
+                contentDescription = att.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = att.name,
+                fontSize = 12.sp,
+                color = AccentBlue,
+                maxLines = 1
+            )
+            return@Row
+        }
         Icon(
             icon,
             contentDescription = null,
@@ -403,6 +456,122 @@ private fun NoteAttachmentChip(att: NoteAttachment) {
             maxLines = 1
         )
     }
+}
+
+/**
+ * Великий перегляд однієї замітки: повний текст, дата створення, нагадування,
+ * **повнорозмірні зображення-вкладення** і чіпи інших файлів. Дозволяє запустити
+ * редагування або просто закрити вікно.
+ */
+@Composable
+private fun NoteViewerDialog(
+    note: Note,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit
+) {
+    val context = LocalContext.current
+    val cantOpenText = tr("Не вдалося відкрити файл", "Could not open file")
+    val attachments = remember(note.attachments) { NoteAttachment.parseAll(note.attachments) }
+    val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    val createdFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(note.title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = tr("Створено: ", "Created: ") + createdFormat.format(Date(note.createdAt)),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                if (note.reminderDate != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Alarm,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = AccentOrange
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = dateFormat.format(Date(note.reminderDate)),
+                            fontSize = 13.sp,
+                            color = AccentOrange
+                        )
+                    }
+                }
+                if (note.text.isNotEmpty()) {
+                    Text(
+                        text = note.text,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (attachments.isNotEmpty()) {
+                    Text(
+                        text = tr("Вкладення", "Attachments"),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        attachments.forEach { att ->
+                            if (att.isImage()) {
+                                AsyncImage(
+                                    model = att.uri,
+                                    contentDescription = att.name,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(220.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable {
+                                            try {
+                                                val uri = Uri.parse(att.uri)
+                                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                    setDataAndType(uri, context.contentResolver.getType(uri) ?: "image/*")
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, cantOpenText, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                )
+                                Text(
+                                    text = att.name,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            } else {
+                                NoteAttachmentChip(att)
+                            }
+                        }
+                    }
+                }
+                if (attachments.isEmpty() && note.text.isEmpty()) {
+                    Text(
+                        text = tr("Замітка порожня", "Note is empty"),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEdit) { Text(tr("Редагувати", "Edit")) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(tr("Закрити", "Close")) }
+        }
+    )
 }
 
 @Composable
@@ -593,7 +762,11 @@ private fun AddOrEditNoteDialog(
                                 "application/pdf",
                                 "application/vnd.ms-excel",
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                "text/csv"
+                                "text/csv",
+                                "image/jpeg",
+                                "image/png",
+                                "image/webp",
+                                "image/*"
                             )
                         )
                     },
@@ -602,7 +775,7 @@ private fun AddOrEditNoteDialog(
                 ) {
                     Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(tr("Прикріпити файл (PDF, Excel)", "Attach file (PDF, Excel)"))
+                    Text(tr("Прикріпити файл (PDF, Excel, фото)", "Attach file (PDF, Excel, image)"))
                 }
 
                 if (errorMessage.isNotEmpty()) {

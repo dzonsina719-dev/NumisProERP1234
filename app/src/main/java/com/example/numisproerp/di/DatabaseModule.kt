@@ -2,6 +2,7 @@ package com.numisproerp.di
 
 import android.content.Context
 import androidx.room.Room
+import com.numisproerp.data.dao.BundleDao
 import com.numisproerp.data.dao.CatalogDao
 import com.numisproerp.data.dao.ClientDao
 import com.numisproerp.data.dao.OtherExpenseDao
@@ -75,4 +76,7 @@ object DatabaseModule {
 
     @Provides
     fun provideNoteDao(db: AppDatabase): NoteDao = db.noteDao()
+
+    @Provides
+    fun provideBundleDao(db: AppDatabase): BundleDao = db.bundleDao()
 }

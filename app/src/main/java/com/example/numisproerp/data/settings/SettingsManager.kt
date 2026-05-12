@@ -13,16 +13,20 @@ import javax.inject.Singleton
  *
  * - [DEFAULT] — класична iOS-Blue палітра, з якою додаток був до цього.
  * - [OLEG_SMILE] — фірмова чорно-золота тема із емблемою лева.
+ * - [OCEAN_GLASS] — глибокий темно-синій фон з бірюзовими фрост-картками
+ *   і м'ятним монетарним акцентом ("OceanGlass").
  */
 enum class AppTheme {
     DEFAULT,
     OLEG_SMILE,
-    OLEG_SMILE_V2;
+    OLEG_SMILE_V2,
+    OCEAN_GLASS;
 
     companion object {
         fun fromKey(key: String?): AppTheme = when (key) {
             OLEG_SMILE.name -> OLEG_SMILE
             OLEG_SMILE_V2.name -> OLEG_SMILE_V2
+            OCEAN_GLASS.name -> OCEAN_GLASS
             else -> DEFAULT
         }
     }

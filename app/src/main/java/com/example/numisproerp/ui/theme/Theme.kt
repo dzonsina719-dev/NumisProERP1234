@@ -97,6 +97,25 @@ private val OlegSmileV2ColorScheme = darkColorScheme(
     onError = Color(0xFF121212)
 )
 
+private val OceanGlassColorScheme = darkColorScheme(
+    primary = OceanMint,
+    onPrimary = Color(0xFF062017),
+    primaryContainer = OceanPrimaryContainer,
+    onPrimaryContainer = OceanMint,
+    secondary = OceanCyan,
+    onSecondary = Color(0xFF052431),
+    tertiary = OceanOrange,
+    onTertiary = Color(0xFF241000),
+    background = OceanBackground,
+    onBackground = OceanOnSurface,
+    surface = OceanSurface,
+    onSurface = OceanOnSurface,
+    surfaceVariant = OceanSurfaceVariant,
+    onSurfaceVariant = OceanOnSurfaceVariant,
+    error = OceanRed,
+    onError = Color(0xFF1A0606)
+)
+
 private val IOSShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -114,6 +133,7 @@ fun NumisProERPTheme(
     val colorScheme = when (appTheme) {
         AppTheme.OLEG_SMILE -> OlegSmileColorScheme
         AppTheme.OLEG_SMILE_V2 -> OlegSmileV2ColorScheme
+        AppTheme.OCEAN_GLASS -> OceanGlassColorScheme
         AppTheme.DEFAULT -> if (darkTheme) DarkColorScheme else LightColorScheme
     }
 
@@ -156,6 +176,37 @@ fun NumisProERPTheme(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                             alpha = 0.15f
+                        )
+                        content()
+                    }
+                }
+                AppTheme.OCEAN_GLASS -> {
+                    // Глибокий синій вертикальний градієнт + radial sheen зверху.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        OceanBackgroundTop,
+                                        OceanBackgroundMid,
+                                        OceanBackgroundBottom
+                                    )
+                                )
+                            )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            Color(0x224DD0E1),
+                                            Color(0x00000000)
+                                        ),
+                                        radius = 900f
+                                    )
+                                )
                         )
                         content()
                     }

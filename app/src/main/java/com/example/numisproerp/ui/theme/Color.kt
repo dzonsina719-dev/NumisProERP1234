@@ -88,3 +88,24 @@ val OlegV2SurfaceVariant = Color(0xCC2A2A2A)
 val OlegV2PrimaryContainer = Color(0xCC2C2C2C)
 val OlegV2OnSurface = Color(0xFFFFFFFF)
 val OlegV2OnSurfaceVariant = Color(0xFFB0B0B0)
+
+// =============================================================================
+// OceanGlass: глибокий темно-синій фон, бірюзовий рамки-сяйва, м'ятний
+// акцент для сум і прибутку, прозорі frosted-glass картки.
+// =============================================================================
+// background прозорий, щоб NumisProERPTheme був відповідальний за градієнт фону.
+val OceanBackground = Color(0x00000000)
+val OceanBackgroundTop = Color(0xFF0A1626)
+val OceanBackgroundMid = Color(0xFF0E2238)
+val OceanBackgroundBottom = Color(0xFF081320)
+val OceanSurface = Color(0xCC162B45)        // прозорий фрост для карток
+val OceanSurfaceVariant = Color(0xCC1E3859)
+val OceanPrimaryContainer = Color(0xCC123354)
+val OceanOnSurface = Color(0xFFE6EEF8)      // основний текст
+val OceanOnSurfaceVariant = Color(0xFF94A8C2) // приглушений текст
+
+val OceanMint = Color(0xFF5FE3B0)           // великі суми і "Прибуток"
+val OceanCyan = Color(0xFF4DD0E1)           // обводки карток, фокус
+val OceanCyanDim = Color(0x803FB5C8)        // приглушений бірюзовий для border
+val OceanOrange = Color(0xFFFFB661)
+val OceanRed = Color(0xFFFF6B6B)
