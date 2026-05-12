@@ -26,6 +26,8 @@ class ExcelImporter(
         val success: Boolean,
         val message: String,
         val productsCount: Int = 0,
+        val productsAutoIdCount: Int = 0,
+        val productsSkippedCount: Int = 0,
         val clientsCount: Int = 0,
         val suppliersCount: Int = 0,
         val purchasesCount: Int = 0,
@@ -35,11 +37,16 @@ class ExcelImporter(
         val collectionCount: Int = 0
     )
 
-    suspend fun importFromUri(context: Context, uri: Uri): ImportResult {
+    /**
+     * @param productsOnly якщо true — імпортується лише аркуш «Каталог Товарів»,
+     *                     решта аркушів (клієнти, постачальники, закупівлі, продажі,
+     *                     витрати, списання, колекція) ігнорується.
+     */
+    suspend fun importFromUri(context: Context, uri: Uri, productsOnly: Boolean = false): ImportResult {
         return withContext(Dispatchers.IO) {
             try {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    return@withContext importFromInputStream(inputStream)
+                    return@withContext importFromInputStream(inputStream, productsOnly)
                 } ?: ImportResult(false, "Не вдалося відкрити файл")
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -48,8 +55,13 @@ class ExcelImporter(
         }
     }
 
-    private suspend fun importFromInputStream(inputStream: InputStream): ImportResult {
+    private suspend fun importFromInputStream(
+        inputStream: InputStream,
+        productsOnly: Boolean = false
+    ): ImportResult {
         var productsCount = 0
+        var productsAutoIdCount = 0
+        var productsSkippedCount = 0
         var clientsCount = 0
         var suppliersCount = 0
         var purchasesCount = 0
@@ -73,15 +85,31 @@ class ExcelImporter(
                     .equals("PhotoPath", ignoreCase = true)
 
                 val products = mutableListOf<Product>()
+                val importTimestamp = System.currentTimeMillis()
                 for (rowIndex in 1 until productSheet.physicalNumberOfRows) {
                     val row = productSheet.getRow(rowIndex) ?: continue
-                    val catalogId = row.getCell(0)?.toString() ?: continue
-                    if (catalogId.isBlank()) continue
+                    val rawCatalogId = row.getCell(0)?.toString()?.trim() ?: ""
+                    val nameValue = row.getCell(1)?.toString()?.trim() ?: ""
+
+                    // Якщо порожній і ID, і назва — рядок повністю порожній, пропускаємо
+                    if (rawCatalogId.isBlank() && nameValue.isBlank()) {
+                        productsSkippedCount++
+                        continue
+                    }
+
+                    // Якщо ID порожній, але є назва — авто-генеруємо унікальний ID.
+                    // Базуємо на номері рядка + timestamp, щоб не конфліктувати з існуючими.
+                    val catalogId = if (rawCatalogId.isBlank()) {
+                        productsAutoIdCount++
+                        "AUTO_${importTimestamp}_$rowIndex"
+                    } else {
+                        rawCatalogId
+                    }
 
                     val product = if (isNewFormat) {
                         Product(
                             catalogId = catalogId,
-                            name = row.getCell(1)?.toString() ?: "",
+                            name = nameValue,
                             series = row.getCell(2)?.toString() ?: "",
                             material = row.getCell(3)?.toString() ?: "",
                             nominal = row.getCell(4)?.toString() ?: "",
@@ -93,7 +121,7 @@ class ExcelImporter(
                     } else {
                         Product(
                             catalogId = catalogId,
-                            name = row.getCell(1)?.toString() ?: "",
+                            name = nameValue,
                             series = row.getCell(2)?.toString() ?: "",
                             issueDate = row.getCell(3)?.toString() ?: "",
                             material = row.getCell(4)?.toString() ?: "",
@@ -111,10 +139,22 @@ class ExcelImporter(
                     products.add(product)
                 }
                 if (products.isNotEmpty()) {
-                    database.productDao().deleteAll()
+                    // Upsert: існуючі товари оновлюються по catalogId (PK),
+                    // нові — додаються. Попередня БД НЕ зноситься.
                     database.productDao().insertAll(products)
                     productsCount = products.size
                 }
+            }
+
+            if (productsOnly) {
+                workbook.close()
+                return ImportResult(
+                    success = true,
+                    message = "Імпорт товарів завершено успішно",
+                    productsCount = productsCount,
+                    productsAutoIdCount = productsAutoIdCount,
+                    productsSkippedCount = productsSkippedCount
+                )
             }
 
             // 2. Імпорт клієнтів (аркуш "Клієнти")
@@ -137,7 +177,7 @@ class ExcelImporter(
                     clients.add(client)
                 }
                 if (clients.isNotEmpty()) {
-                    database.clientDao().deleteAll()
+                    // Upsert (PK = clientId)
                     database.clientDao().insertAll(clients)
                     clientsCount = clients.size
                 }
@@ -162,7 +202,7 @@ class ExcelImporter(
                     suppliers.add(supplier)
                 }
                 if (suppliers.isNotEmpty()) {
-                    database.supplierDao().deleteAll()
+                    // Upsert (PK = supplierId)
                     database.supplierDao().insertAll(suppliers)
                     suppliersCount = suppliers.size
                 }
@@ -197,7 +237,7 @@ class ExcelImporter(
                     purchases.add(purchase)
                 }
                 if (purchases.isNotEmpty()) {
-                    database.purchaseDao().deleteAll()
+                    // Upsert (PK = purchaseId)
                     purchases.forEach { database.purchaseDao().insert(it) }
                     purchasesCount = purchases.size
                 }
@@ -233,7 +273,7 @@ class ExcelImporter(
                     sales.add(sale)
                 }
                 if (sales.isNotEmpty()) {
-                    database.saleDao().deleteAll()
+                    // Upsert (PK = saleId)
                     sales.forEach { database.saleDao().insert(it) }
                     salesCount = sales.size
                 }
@@ -265,7 +305,7 @@ class ExcelImporter(
                     expenses.add(expense)
                 }
                 if (expenses.isNotEmpty()) {
-                    database.otherExpenseDao().deleteAll()
+                    // Upsert (PK = expenseId)
                     expenses.forEach { database.otherExpenseDao().insert(it) }
                     expensesCount = expenses.size
                 }
@@ -300,7 +340,7 @@ class ExcelImporter(
                     writeoffs.add(writeoff)
                 }
                 if (writeoffs.isNotEmpty()) {
-                    database.writeoffDao().deleteAll()
+                    // Upsert (PK = writeoffId)
                     writeoffs.forEach { database.writeoffDao().insert(it) }
                     writeoffsCount = writeoffs.size
                 }
@@ -339,7 +379,7 @@ class ExcelImporter(
                     items.add(item)
                 }
                 if (items.isNotEmpty()) {
-                    database.collectionItemDao().deleteAll()
+                    // Upsert (PK = collectionId)
                     items.forEach { database.collectionItemDao().insert(it) }
                     collectionCount = items.size
                 }
@@ -348,9 +388,9 @@ class ExcelImporter(
             workbook.close()
 
             // Після імпорту products повторно синхронізуємо «дзеркальні» Product-и
-            // для всіх товарів з «Моєї колекції». Інакше вони зникали би зі складу
-            // (бо `productDao().deleteAll()` стирає їх, а Excel-імпорт не знає про
-            // collection_items). Записуємо з актуальним `photoPath` із колекції.
+            // для всіх товарів з «Моєї колекції». Записуємо з актуальним `photoPath`
+            // із колекції (upsert не зачепить інших товарів — оновить лише ті, що
+            // мають той самий catalogId, що й collectionId).
             try {
                 val collectionItems = database.collectionItemDao().getAllSync()
                 if (collectionItems.isNotEmpty()) {
@@ -376,6 +416,8 @@ class ExcelImporter(
                 success = true,
                 message = "Імпорт завершено успішно",
                 productsCount = productsCount,
+                productsAutoIdCount = productsAutoIdCount,
+                productsSkippedCount = productsSkippedCount,
                 clientsCount = clientsCount,
                 suppliersCount = suppliersCount,
                 purchasesCount = purchasesCount,

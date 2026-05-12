@@ -134,7 +134,35 @@ fun SettingsScreen(
     val expensesLbl = tr("Витрат", "Expenses")
     val writeoffsLbl = tr("Списань", "Writeoffs")
     val collectionLbl = tr("Колекція", "Collection")
+    val autoIdLbl = tr("авто-ID", "auto-ID")
+    val skippedLbl = tr("пропущено порожніх", "skipped empty")
     val exportDoneTitle = tr("Експорт завершено", "Export complete")
+
+    // Builds Toast з результату. Якщо productsOnly — показуємо тільки блок товарів.
+    val buildImportMessage: (ExcelImporter.ImportResult, Boolean) -> String = { result, productsOnly ->
+        if (!result.success) {
+            result.message
+        } else if (productsOnly) {
+            val parts = mutableListOf("$productsLbl: ${result.productsCount}")
+            if (result.productsAutoIdCount > 0) parts += "$autoIdLbl: ${result.productsAutoIdCount}"
+            if (result.productsSkippedCount > 0) parts += "$skippedLbl: ${result.productsSkippedCount}"
+            "$importedTitle — ${parts.joinToString(", ")}"
+        } else {
+            val parts = mutableListOf(
+                "$productsLbl: ${result.productsCount}",
+                "$clientsLbl: ${result.clientsCount}",
+                "$suppliersLbl: ${result.suppliersCount}",
+                "$purchasesLbl: ${result.purchasesCount}",
+                "$salesLbl: ${result.salesCount}",
+                "$expensesLbl: ${result.expensesCount}",
+                "$writeoffsLbl: ${result.writeoffsCount}",
+                "$collectionLbl: ${result.collectionCount}"
+            )
+            if (result.productsAutoIdCount > 0) parts += "$autoIdLbl: ${result.productsAutoIdCount}"
+            if (result.productsSkippedCount > 0) parts += "$skippedLbl: ${result.productsSkippedCount}"
+            "$importedTitle — ${parts.joinToString(", ")}"
+        }
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -142,16 +170,20 @@ fun SettingsScreen(
         if (uri != null) {
             scope.launch {
                 val importer = ExcelImporter(database)
-                val result = importer.importFromUri(context, uri)
-                val message = if (result.success) {
-                    "$importedTitle: $productsLbl:${result.productsCount}, $clientsLbl:${result.clientsCount}, " +
-                        "$suppliersLbl:${result.suppliersCount}, $purchasesLbl:${result.purchasesCount}, " +
-                        "$salesLbl:${result.salesCount}, $expensesLbl:${result.expensesCount}, " +
-                        "$writeoffsLbl:${result.writeoffsCount}, $collectionLbl:${result.collectionCount}"
-                } else {
-                    result.message
-                }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                val result = importer.importFromUri(context, uri, productsOnly = false)
+                Toast.makeText(context, buildImportMessage(result, false), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val importProductsOnlyLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val importer = ExcelImporter(database)
+                val result = importer.importFromUri(context, uri, productsOnly = true)
+                Toast.makeText(context, buildImportMessage(result, true), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -371,6 +403,9 @@ fun SettingsScreen(
             onImport = {
                 importLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             },
+            onImportProductsOnly = {
+                importProductsOnlyLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            },
             onExport = exportAction,
             onDismiss = { showDataDialog = false }
         )
@@ -539,7 +574,12 @@ private fun LangRow(title: String, selected: Boolean, onClick: () -> Unit) {
 // ======================== Data dialog ========================
 
 @Composable
-private fun DataDialog(onImport: () -> Unit, onExport: () -> Unit, onDismiss: () -> Unit) {
+private fun DataDialog(
+    onImport: () -> Unit,
+    onImportProductsOnly: () -> Unit,
+    onExport: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(tr("Дані", "Data")) },
@@ -548,13 +588,26 @@ private fun DataDialog(onImport: () -> Unit, onExport: () -> Unit, onDismiss: ()
                 Button(onClick = { onImport(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
                     Icon(Icons.Outlined.Publish, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(tr("Імпорт з Excel", "Import from Excel"))
+                    Text(tr("Імпорт з Excel (всі дані)", "Import from Excel (all data)"))
+                }
+                Button(onClick = { onImportProductsOnly(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Outlined.Publish, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(tr("Імпорт лише товарів", "Import products only"))
                 }
                 Button(onClick = { onExport(); onDismiss() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
                     Icon(Icons.Outlined.ImportExport, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(tr("Експорт в Excel", "Export to Excel"))
                 }
+                Text(
+                    text = tr(
+                        "Імпорт оновлює існуючі записи за їх ID і додає нові — старі дані не зносяться. Для нових рядків без CatalogID він згенерується автоматично.",
+                        "Import upserts records by ID and adds new ones — existing data is preserved. Rows with empty CatalogID get an auto-generated ID."
+                    ),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Закрити", "Close")) } }
