@@ -139,6 +139,16 @@ fun DateRangeFilterRow(
 ) {
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // [DEBUG] Цей рядок видимий завжди — показує реальний stack-стейт пропсів.
+        // Якщо тут з'являється дата після "Готово" — state оновлюється, баг в UI/render.
+        // Якщо тут залишається null — state не доходить, баг в callback/lambda.
+        Text(
+            text = "[DBG] startMillis=$startMillis | endMillis=$endMillis",
+            fontSize = 9.sp,
+            color = androidx.compose.ui.graphics.Color(0xFFE91E63),
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -184,6 +194,7 @@ fun DateRangeFilterRow(
                 )
             }
         }
+    }
     }
 }
 

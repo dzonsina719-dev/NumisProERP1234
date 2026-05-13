@@ -259,12 +259,25 @@ fun ClientsScreen(
                 DateFilterPickerMode.FROM -> historyStart
                 DateFilterPickerMode.TO -> historyEnd
             },
-            onDismiss = { datePickerMode = null },
+            onDismiss = {
+                android.widget.Toast.makeText(context, "[DBG] Clients onDismiss", android.widget.Toast.LENGTH_SHORT).show()
+                datePickerMode = null
+            },
             onConfirm = { picked ->
+                android.widget.Toast.makeText(
+                    context,
+                    "[DBG] Clients onConfirm mode=$mode picked=$picked",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
                 when (mode) {
                     DateFilterPickerMode.FROM -> historyStart = startOfDay(picked)
                     DateFilterPickerMode.TO -> historyEnd = endOfDay(picked)
                 }
+                android.widget.Toast.makeText(
+                    context,
+                    "[DBG] After: historyStart=$historyStart historyEnd=$historyEnd",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
                 datePickerMode = null
             }
         )
