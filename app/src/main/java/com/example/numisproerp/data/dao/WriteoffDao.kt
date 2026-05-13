@@ -26,10 +26,15 @@ interface WriteoffDao {
     @Query("SELECT * FROM writeoffs ORDER BY date DESC")
     suspend fun getAll(): List<Writeoff>
 
-    @Query("SELECT SUM(totalAmount) FROM writeoffs")
+    // Тільки «реальні» списання — без внутрішніх операцій «Моя збірка».
+    @Query("SELECT SUM(totalAmount) FROM writeoffs WHERE isBundleOp = 0")
     suspend fun getTotalSum(): Double?
 
-    @Query("SELECT SUM(totalAmount) FROM writeoffs WHERE date BETWEEN :startDate AND :endDate")
+    @Query("""
+        SELECT SUM(totalAmount) FROM writeoffs
+        WHERE date BETWEEN :startDate AND :endDate
+          AND isBundleOp = 0
+    """)
     suspend fun getSumByDateRange(startDate: Long, endDate: Long): Double?
 
     @Query("SELECT SUM(quantity) FROM writeoffs WHERE catalogId = :catalogId")
@@ -40,9 +45,13 @@ interface WriteoffDao {
                w.reason, w.comment, p.name as productName
         FROM writeoffs w
         JOIN products p ON w.catalogId = p.catalogId
+        WHERE w.isBundleOp = 0
         ORDER BY w.date DESC
     """)
     suspend fun getAllWithProductName(): List<WriteoffWithProductName>
+
+    @Query("DELETE FROM writeoffs WHERE writeoffId LIKE :pattern")
+    suspend fun deleteByIdLike(pattern: String)
 
     @Query("DELETE FROM writeoffs")
     suspend fun deleteAll()

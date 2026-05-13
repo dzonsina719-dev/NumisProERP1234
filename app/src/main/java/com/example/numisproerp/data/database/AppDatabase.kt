@@ -43,7 +43,7 @@ import com.numisproerp.data.entities.Note
         Bundle::class,
         BundleComponent::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -192,6 +192,28 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     db.execSQL(
                         "CREATE INDEX IF NOT EXISTS `index_bundle_components_componentCatalogId` ON `bundle_components` (`componentCatalogId`)"
+                    )
+                }
+            },
+            // 17 → 18: позначка `isBundleOp` для purchases і writeoffs.
+            // Записи з покажчиком true (P_BUNDLE_*, WO_BUNDLE_*) — це внутрішні
+            // складські перетворення «Моя збірка», а не реальні
+            // закупівлі/списання. Вони мають впливати на залишок, але НЕ
+            // з'являтися в історії та звітах.
+            object : Migration(17, 18) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE `purchases` ADD COLUMN `isBundleOp` INTEGER NOT NULL DEFAULT 0"
+                    )
+                    db.execSQL(
+                        "ALTER TABLE `writeoffs` ADD COLUMN `isBundleOp` INTEGER NOT NULL DEFAULT 0"
+                    )
+                    // Перенесення вже створених «збіркових» записів старими версіями.
+                    db.execSQL(
+                        "UPDATE `purchases` SET `isBundleOp` = 1 WHERE `purchaseId` LIKE 'P_BUNDLE_%'"
+                    )
+                    db.execSQL(
+                        "UPDATE `writeoffs` SET `isBundleOp` = 1 WHERE `writeoffId` LIKE 'WO_BUNDLE_%'"
                     )
                 }
             }

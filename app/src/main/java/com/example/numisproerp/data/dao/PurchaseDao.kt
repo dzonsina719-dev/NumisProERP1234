@@ -29,10 +29,15 @@ interface PurchaseDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(purchase: Purchase)
 
-    @Query("SELECT SUM(totalAmount) FROM purchases")
+    // Тільки «реальні» закупівлі — без внутрішніх операцій «Моя збірка».
+    @Query("SELECT SUM(totalAmount) FROM purchases WHERE isBundleOp = 0")
     suspend fun getTotalSum(): Double?
 
-    @Query("SELECT SUM(totalAmount) FROM purchases WHERE date BETWEEN :startDate AND :endDate")
+    @Query("""
+        SELECT SUM(totalAmount) FROM purchases
+        WHERE date BETWEEN :startDate AND :endDate
+          AND isBundleOp = 0
+    """)
     suspend fun getSumByDateRange(startDate: Long, endDate: Long): Double?
 
     @Query("""
@@ -41,6 +46,7 @@ interface PurchaseDao {
         FROM purchases p
         JOIN products pr ON p.catalogId = pr.catalogId
         JOIN suppliers s ON p.supplierId = s.supplierId
+        WHERE p.isBundleOp = 0
         ORDER BY p.date DESC
         LIMIT :limit
     """)
@@ -52,6 +58,7 @@ interface PurchaseDao {
         FROM purchases p
         JOIN products pr ON p.catalogId = pr.catalogId
         WHERE p.supplierId = :supplierId
+          AND p.isBundleOp = 0
         ORDER BY p.date DESC
     """)
     suspend fun getPurchasesBySupplier(supplierId: String): List<PurchaseWithProductName>
@@ -64,6 +71,9 @@ interface PurchaseDao {
 
     @Query("SELECT SUM(totalAmount) FROM purchases WHERE catalogId = :catalogId")
     suspend fun getTotalAmountByProduct(catalogId: String): Double
+
+    @Query("DELETE FROM purchases WHERE purchaseId = :id")
+    suspend fun deleteById(id: String)
 
     @Query("DELETE FROM purchases")
     suspend fun deleteAll()

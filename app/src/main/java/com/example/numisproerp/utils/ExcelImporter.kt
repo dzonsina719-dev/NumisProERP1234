@@ -294,7 +294,10 @@ class ExcelImporter(
                         quantity = row.getCell(4)?.toString()?.toDoubleOrNull()?.toInt() ?: 0,
                         pricePerUnit = row.getCell(5)?.toString()?.toDoubleOrNull() ?: 0.0,
                         additionalCosts = row.getCell(6)?.toString()?.toDoubleOrNull() ?: 0.0,
-                        totalAmount = row.getCell(7)?.toString()?.toDoubleOrNull() ?: 0.0
+                        totalAmount = row.getCell(7)?.toString()?.toDoubleOrNull() ?: 0.0,
+                        // ID на кшталт `P_BUNDLE_<bundleId>` — внутрішня операція збірки лоту.
+                        // Зберігаємо як службову, щоб не з'являлась у звичайних історіях/звітах.
+                        isBundleOp = purchaseId.startsWith("P_BUNDLE_")
                     )
                     purchases.add(purchase)
                 }
@@ -399,7 +402,10 @@ class ExcelImporter(
                         pricePerUnit = row.getCell(4)?.toString()?.toDoubleOrNull() ?: 0.0,
                         totalAmount = row.getCell(5)?.toString()?.toDoubleOrNull() ?: 0.0,
                         reason = row.getCell(6)?.toString() ?: "",
-                        comment = row.getCell(7)?.toString() ?: ""
+                        comment = row.getCell(7)?.toString() ?: "",
+                        // ID на кшталт `WO_BUNDLE_<bundleId>_<componentId>` — внутрішнє
+                        // списання компонента при збірці. Не показуємо в історії списань.
+                        isBundleOp = writeoffId.startsWith("WO_BUNDLE_")
                     )
                     writeoffs.add(writeoff)
                 }

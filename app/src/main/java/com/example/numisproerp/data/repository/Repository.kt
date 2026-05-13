@@ -497,6 +497,12 @@ class Repository @Inject constructor(
      * реєстрація Product, закупівля, вставка Bundle + BundleComponent) виконуються
      * в єдиній Room-транзакції під [NonCancellable] — їх неможливо розірвати
      * каскадним припиненням корутини або вбивством застосунку.
+     *
+     * Списання компонентів і закупівля самої збірки створюються з прапорцем
+     * `isBundleOp = true` — вони впливають на залишок, але не з'являються в
+     * історії закупівель/списань і в звітах. Це не нова покупка з
+     * постачальника і не реальна втрата, а перетворення компонентів у
+     * готовий лот.
      */
     suspend fun createBundleAtomically(
         writeoffs: List<Writeoff>,
@@ -506,13 +512,58 @@ class Repository @Inject constructor(
         components: List<BundleComponent>
     ) = withContext(NonCancellable + Dispatchers.IO) {
         database.withTransaction {
-            writeoffs.forEach { database.writeoffDao().insert(it) }
+            writeoffs.forEach { database.writeoffDao().insert(it.copy(isBundleOp = true)) }
             database.productDao().insert(product)
-            database.purchaseDao().insert(purchase)
+            database.purchaseDao().insert(purchase.copy(isBundleOp = true))
             database.bundleDao().insertBundle(bundle)
             database.bundleDao().insertComponents(components)
         }
     }
+
+    /**
+     * Результат спроби розібрати збірку назад на компоненти.
+     */
+    sealed class DisassembleResult {
+        /** Розібрано успішно — компоненти повернулися на склад. */
+        object Success : DisassembleResult()
+        /** Збірка вже частково чи повністю продана — розбирати не можна. */
+        object AlreadySold : DisassembleResult()
+        /** Збірки з таким ID не знайдено в БД. */
+        object NotFound : DisassembleResult()
+    }
+
+    /**
+     * Атомарне розбирання збірки назад на компоненти.
+     *
+     * Логіка: фактично видаляє всі сліди створення цієї збірки —
+     * `Purchase` (`P_BUNDLE_<id>`), всі `Writeoff` (`WO_BUNDLE_<id>_*`),
+     * саму `Bundle` (cascade-чистить `bundle_components`) і `Product` із
+     * `catalogId = "BUNDLE_<id>"`. Після цього SQL-обчислення `currentStock`
+     * автоматично «поверне» компоненти на склад (бо їх більше не списано), а
+     * сама збірка зникне зі складу та з каталогу.
+     *
+     * Захист: якщо для збірки вже існує хоча б один `Sale`, повертаємо
+     * [DisassembleResult.AlreadySold] і нічого не змінюємо — інакше залишок
+     * компонентів виявиться неправильним (вже не на складі), а Sale залишився
+     * без батьківського Product.
+     */
+    suspend fun disassembleBundleAtomically(bundleId: String): DisassembleResult =
+        withContext(NonCancellable + Dispatchers.IO) {
+            val existing = database.bundleDao().getById(bundleId)
+                ?: return@withContext DisassembleResult.NotFound
+            val bundleCatalogId = "BUNDLE_${existing.bundleId}"
+            val sold = database.saleDao().getTotalQuantitySold(bundleCatalogId)
+            if (sold > 0) {
+                return@withContext DisassembleResult.AlreadySold
+            }
+            database.withTransaction {
+                database.purchaseDao().deleteById("P_BUNDLE_${existing.bundleId}")
+                database.writeoffDao().deleteByIdLike("WO_BUNDLE_${existing.bundleId}_%")
+                database.bundleDao().deleteBundle(existing.bundleId)
+                database.productDao().deleteByCatalogId(bundleCatalogId)
+            }
+            DisassembleResult.Success
+        }
 
     // ==================== REPAIR ====================
 
