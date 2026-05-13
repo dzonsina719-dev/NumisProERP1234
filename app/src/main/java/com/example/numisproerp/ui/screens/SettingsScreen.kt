@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
@@ -100,6 +101,7 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(language: AppLanguage) { settingsManager.language = language }
     fun setLowStockThreshold(value: Int) { settingsManager.lowStockThreshold = value }
     suspend fun clearAllData() { repository.clearAllData() }
+    suspend fun repairZeroQuantities(): Repository.RepairResult = repository.repairZeroQuantities()
 }
 
 @Composable
@@ -124,6 +126,17 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var resetConfirmation by remember { mutableStateOf("") }
     val resetDoneText = tr("Усі дані видалено", "All data cleared")
+
+    val repairButtonTitle = tr("Виправити кількості", "Repair quantities")
+    val repairButtonSubtitle = tr("Якщо показує 0 шт. замість реальної кількості", "Fix qty=0 from old import bug")
+    val repairNothingMsg = tr(
+        "Нічого виправляти — всі кількості вже коректні.",
+        "Nothing to fix — all quantities are correct."
+    )
+    val repairFixedFmt = tr(
+        "Виправлено: закупівель %d, продажів %d",
+        "Fixed: purchases %d, sales %d"
+    )
 
     val importedTitle = tr("Імпорт завершено", "Import complete")
     val productsLbl = tr("Товарів", "Products")
@@ -363,6 +376,27 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            // Repair button
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                SettingsButton(
+                    icon = Icons.Default.Build,
+                    title = repairButtonTitle,
+                    subtitle = repairButtonSubtitle,
+                    onClick = {
+                        scope.launch {
+                            val result = viewModel.repairZeroQuantities()
+                            val msg = if (result.fixedPurchases == 0 && result.fixedSales == 0) {
+                                repairNothingMsg
+                            } else {
+                                String.format(repairFixedFmt, result.fixedPurchases, result.fixedSales)
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                )
             }
 
             // Danger zone
