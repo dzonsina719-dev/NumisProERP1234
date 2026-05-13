@@ -513,4 +513,58 @@ class Repository @Inject constructor(
             database.bundleDao().insertComponents(components)
         }
     }
+
+    // ==================== REPAIR ====================
+
+    /**
+     * Виправляє нульову кількість у Purchase/Sale-записах, які залишилися після
+     * багу імпорту Excel (старі версії читали NUMERIC cell як "5.0", і
+     * `toIntOrNull()` повертав null → qty=0).
+     *
+     * Для кожного запису з qty=0, totalAmount>0 і pricePerUnit>0:
+     *   qty = round((totalAmount − additionalCosts) / pricePerUnit)
+     *
+     * Якщо обчислена qty виходить ≤ 0 — лишаємо без змін (можливо, легітимний
+     * нульовий запис).
+     *
+     * Повертає кількість виправлених записів окремо для закупівель і продажів.
+     */
+    suspend fun repairZeroQuantities(): RepairResult = withContext(Dispatchers.IO) {
+        var fixedPurchases = 0
+        var fixedSales = 0
+
+        database.withTransaction {
+            val purchases = database.purchaseDao().getAllPurchases()
+            for (p in purchases) {
+                if (p.quantity != 0) continue
+                if (p.totalAmount <= 0.0 || p.pricePerUnit <= 0.0) continue
+                val net = (p.totalAmount - p.additionalCosts).coerceAtLeast(0.0)
+                val qty = (net / p.pricePerUnit).let {
+                    if (it.isFinite()) kotlin.math.round(it).toInt() else 0
+                }
+                if (qty > 0) {
+                    database.purchaseDao().insert(p.copy(quantity = qty))
+                    fixedPurchases += 1
+                }
+            }
+
+            val sales = database.saleDao().getAllSales()
+            for (s in sales) {
+                if (s.quantity != 0) continue
+                if (s.totalAmount <= 0.0 || s.pricePerUnit <= 0.0) continue
+                val net = (s.totalAmount - s.additionalCosts).coerceAtLeast(0.0)
+                val qty = (net / s.pricePerUnit).let {
+                    if (it.isFinite()) kotlin.math.round(it).toInt() else 0
+                }
+                if (qty > 0) {
+                    database.saleDao().insert(s.copy(quantity = qty))
+                    fixedSales += 1
+                }
+            }
+        }
+
+        RepairResult(fixedPurchases = fixedPurchases, fixedSales = fixedSales)
+    }
+
+    data class RepairResult(val fixedPurchases: Int, val fixedSales: Int)
 }

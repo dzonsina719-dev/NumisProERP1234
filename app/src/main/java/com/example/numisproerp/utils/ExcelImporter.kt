@@ -289,7 +289,9 @@ class ExcelImporter(
                         date = date,
                         catalogId = row.getCell(2)?.toString() ?: "",
                         supplierId = row.getCell(3)?.toString() ?: "",
-                        quantity = row.getCell(4)?.toString()?.toIntOrNull() ?: 0,
+                        // POI записує Int як NUMERIC з .0 ("5.0"). `.toIntOrNull()` на "5.0" дає null,
+                        // треба спочатку в Double, потім в Int.
+                        quantity = row.getCell(4)?.toString()?.toDoubleOrNull()?.toInt() ?: 0,
                         pricePerUnit = row.getCell(5)?.toString()?.toDoubleOrNull() ?: 0.0,
                         additionalCosts = row.getCell(6)?.toString()?.toDoubleOrNull() ?: 0.0,
                         totalAmount = row.getCell(7)?.toString()?.toDoubleOrNull() ?: 0.0
@@ -324,7 +326,9 @@ class ExcelImporter(
                         date = date,
                         catalogId = row.getCell(2)?.toString() ?: "",
                         clientId = row.getCell(3)?.toString() ?: "",
-                        quantity = row.getCell(4)?.toString()?.toIntOrNull() ?: 0,
+                        // POI записує Int як NUMERIC з .0 ("5.0"). `.toIntOrNull()` на "5.0" дає null,
+                        // треба спочатку в Double, потім в Int.
+                        quantity = row.getCell(4)?.toString()?.toDoubleOrNull()?.toInt() ?: 0,
                         pricePerUnit = row.getCell(5)?.toString()?.toDoubleOrNull() ?: 0.0,
                         additionalCosts = row.getCell(6)?.toString()?.toDoubleOrNull() ?: 0.0,
                         netProfit = row.getCell(7)?.toString()?.toDoubleOrNull() ?: 0.0,
