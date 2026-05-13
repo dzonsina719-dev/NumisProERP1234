@@ -108,46 +108,36 @@ fun endOfDay(timestamp: Long): Long {
 }
 
 /**
+ * Режими виклику пікера дати (потрібно розрізняти “Від” від “До” на викликаючому боці).
+ */
+enum class DateFilterPickerMode { FROM, TO }
+
+/**
  * Рядок-фільтр часового діапазону з двома кнопками (Від / До) та хрестиком
- * скидання. Передає батьківському компоненту обрані `startMillis` та `endMillis`
- * (включно). `null` означає «без обмеження» по відповідному боці.
+ * скидання.
  *
- * Використовує Material3 Compose `DatePicker` з явним перемикачем року і місяців,
- * щоб давав обирати будь-який рік (в тому числі майбутній) — не native
- * спіннер-варіант Android DatePickerDialog, в якому на деяких прошивках важко
- * вибрати дистантний день.
+ * ВАЖЛИВО: цей компонент САМ НЕ відкриває діалог календаря. Раніше
+ * він рендерив календар як Dialog всередині батьківського Dialog’у (Suppliers/Clients
+ * detail), і state-зміни з Dialog-в-Dialog не пропагували коректно (для
+ * користувача виглядало як «натиснув Готово — дата не зберігається»).
+ *
+ * Тепер календар (`DateChooserDialog`) піднято на рівень викликаючого екрану
+ * і відкривається поруч з батьківським Dialog’ом — без вкладеності.
+ * State оновлюється на рівні екрану, батьківський Dialog рекомпозується з новим
+ * `startMillis`/`endMillis`.
+ *
+ * На кожен тап Від/До викликається `onPickerRequest(MODE)` викликаючий екран відповідає
+ * за відкриття `DateChooserDialog` і виклик `onChange(…)` з результатом.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateRangeFilterRow(
     startMillis: Long?,
     endMillis: Long?,
-    onChange: (Long?, Long?) -> Unit
+    onPickerRequest: (DateFilterPickerMode) -> Unit,
+    onClear: () -> Unit
 ) {
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
-    var showFromPicker by remember { mutableStateOf(false) }
-    var showToPicker by remember { mutableStateOf(false) }
-
-    if (showFromPicker) {
-        DateChooserDialog(
-            initialMillis = startMillis,
-            onDismiss = { showFromPicker = false },
-            onConfirm = { picked ->
-                onChange(startOfDay(picked), endMillis)
-                showFromPicker = false
-            }
-        )
-    }
-    if (showToPicker) {
-        DateChooserDialog(
-            initialMillis = endMillis,
-            onDismiss = { showToPicker = false },
-            onConfirm = { picked ->
-                onChange(startMillis, endOfDay(picked))
-                showToPicker = false
-            }
-        )
-    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -155,7 +145,7 @@ fun DateRangeFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedButton(
-            onClick = { showFromPicker = true },
+            onClick = { onPickerRequest(DateFilterPickerMode.FROM) },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
             modifier = Modifier.weight(1f)
         ) {
@@ -169,7 +159,7 @@ fun DateRangeFilterRow(
             )
         }
         OutlinedButton(
-            onClick = { showToPicker = true },
+            onClick = { onPickerRequest(DateFilterPickerMode.TO) },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
             modifier = Modifier.weight(1f)
         ) {
@@ -184,7 +174,7 @@ fun DateRangeFilterRow(
         }
         if (startMillis != null || endMillis != null) {
             IconButton(
-                onClick = { onChange(null, null) },
+                onClick = onClear,
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
@@ -195,6 +185,23 @@ fun DateRangeFilterRow(
             }
         }
     }
+}
+
+/**
+ * Публічний wrapper для `DateChooserDialog` — використовується викликаючими екранами,
+ * щоб відкривати календар НА СВОЄМУ РІВНІ, а не всередині батьківського Dialog’у.
+ */
+@Composable
+fun DateChooserSheet(
+    initialMillis: Long?,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    DateChooserDialog(
+        initialMillis = initialMillis,
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
+    )
 }
 
 /**

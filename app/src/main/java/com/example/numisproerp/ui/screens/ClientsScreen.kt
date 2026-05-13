@@ -66,9 +66,13 @@ import androidx.navigation.NavHostController
 import com.numisproerp.data.dao.ClientWithBalance
 import com.numisproerp.ui.i18n.tr
 import com.numisproerp.data.dao.SaleWithProductName
+import com.numisproerp.ui.components.DateChooserSheet
+import com.numisproerp.ui.components.DateFilterPickerMode
 import com.numisproerp.ui.components.DateRangeFilterRow
 import com.numisproerp.ui.components.DayGroupCard
 import com.numisproerp.ui.components.HistoryRecord
+import com.numisproerp.ui.components.endOfDay
+import com.numisproerp.ui.components.startOfDay
 import com.numisproerp.ui.components.groupHistoryByDay
 import com.numisproerp.ui.theme.AccentBlue
 import com.numisproerp.ui.theme.AccentGreen
@@ -106,6 +110,8 @@ fun ClientsScreen(
 
     var historyStart by remember { mutableStateOf<Long?>(null) }
     var historyEnd by remember { mutableStateOf<Long?>(null) }
+    // Пікер дати піднято на рівень екрану, щоб уникнути Dialog-в-Dialog state-issues.
+    var datePickerMode by remember { mutableStateOf<DateFilterPickerMode?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadClients()
@@ -243,6 +249,25 @@ fun ClientsScreen(
                 }
             }
         }
+    }
+
+    // Календар-діалог рендериться на ТОП-РІВНІ екрану (поруч з client Dialog'ом,
+    // а не всередині нього). Це уникає Dialog-в-Dialog проблем з пропагацією state.
+    datePickerMode?.let { mode ->
+        DateChooserSheet(
+            initialMillis = when (mode) {
+                DateFilterPickerMode.FROM -> historyStart
+                DateFilterPickerMode.TO -> historyEnd
+            },
+            onDismiss = { datePickerMode = null },
+            onConfirm = { picked ->
+                when (mode) {
+                    DateFilterPickerMode.FROM -> historyStart = startOfDay(picked)
+                    DateFilterPickerMode.TO -> historyEnd = endOfDay(picked)
+                }
+                datePickerMode = null
+            }
+        )
     }
 
     if (showDetailDialog && selectedClient != null) {
@@ -402,9 +427,10 @@ fun ClientsScreen(
                                         DateRangeFilterRow(
                                             startMillis = historyStart,
                                             endMillis = historyEnd,
-                                            onChange = { s, e ->
-                                                historyStart = s
-                                                historyEnd = e
+                                            onPickerRequest = { mode -> datePickerMode = mode },
+                                            onClear = {
+                                                historyStart = null
+                                                historyEnd = null
                                             }
                                         )
 
