@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -139,62 +141,51 @@ fun DateRangeFilterRow(
 ) {
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // [DEBUG] Цей рядок видимий завжди — показує реальний stack-стейт пропсів.
-        // Якщо тут з'являється дата після "Готово" — state оновлюється, баг в UI/render.
-        // Якщо тут залишається null — state не доходить, баг в callback/lambda.
-        Text(
-            text = "[DBG] startMillis=$startMillis | endMillis=$endMillis",
-            fontSize = 9.sp,
-            color = androidx.compose.ui.graphics.Color(0xFFE91E63),
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         OutlinedButton(
             onClick = { onPickerRequest(DateFilterPickerMode.FROM) },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = startMillis?.let { tr("Від ", "From ") + df.format(Date(it)) }
                     ?: tr("Від", "From"),
-                fontSize = 12.sp,
-                maxLines = 1
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         OutlinedButton(
             onClick = { onPickerRequest(DateFilterPickerMode.TO) },
             shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = endMillis?.let { tr("До ", "To ") + df.format(Date(it)) }
                     ?: tr("До", "To"),
-                fontSize = 12.sp,
-                maxLines = 1
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         if (startMillis != null || endMillis != null) {
             IconButton(
                 onClick = onClear,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = tr("Скинути", "Clear"),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
-    }
     }
 }
 

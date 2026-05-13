@@ -253,25 +253,26 @@ fun SuppliersScreen(
                 DateFilterPickerMode.FROM -> historyStart
                 DateFilterPickerMode.TO -> historyEnd
             },
-            onDismiss = {
-                android.widget.Toast.makeText(context, "[DBG] Suppliers onDismiss", android.widget.Toast.LENGTH_SHORT).show()
-                datePickerMode = null
-            },
+            onDismiss = { datePickerMode = null },
             onConfirm = { picked ->
-                android.widget.Toast.makeText(
-                    context,
-                    "[DBG] Suppliers onConfirm mode=$mode picked=$picked",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
                 when (mode) {
-                    DateFilterPickerMode.FROM -> historyStart = startOfDay(picked)
-                    DateFilterPickerMode.TO -> historyEnd = endOfDay(picked)
+                    DateFilterPickerMode.FROM -> {
+                        val newStart = startOfDay(picked)
+                        historyStart = newStart
+                        // Якщо «До» вже обрано і воно менше нового «Від» — підтягуємо «До» до того ж дня.
+                        if (historyEnd != null && historyEnd!! < newStart) {
+                            historyEnd = endOfDay(picked)
+                        }
+                    }
+                    DateFilterPickerMode.TO -> {
+                        val newEnd = endOfDay(picked)
+                        historyEnd = newEnd
+                        // Якщо «Від» вже обрано і воно більше нового «До» — підтягуємо «Від» до того ж дня.
+                        if (historyStart != null && historyStart!! > newEnd) {
+                            historyStart = startOfDay(picked)
+                        }
+                    }
                 }
-                android.widget.Toast.makeText(
-                    context,
-                    "[DBG] After: historyStart=$historyStart historyEnd=$historyEnd",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
                 datePickerMode = null
             }
         )
