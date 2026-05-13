@@ -88,6 +88,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.numisproerp.data.dao.CollectionItemWithStock
 import com.numisproerp.data.entities.CollectionItem
 import com.numisproerp.ui.components.SortFilterRow
 import com.numisproerp.ui.i18n.tr
@@ -108,8 +109,8 @@ fun MyCollectionScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    var detailItem by remember { mutableStateOf<CollectionItem?>(null) }
-    var deleteCandidate by remember { mutableStateOf<CollectionItem?>(null) }
+    var detailItem by remember { mutableStateOf<CollectionItemWithStock?>(null) }
+    var deleteCandidate by remember { mutableStateOf<CollectionItemWithStock?>(null) }
 
     Box(
         modifier = Modifier
@@ -238,8 +239,11 @@ fun MyCollectionScreen(
                 ) {
                     Column {
                         Text(tr("Кількість позицій", "Item count"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        // Показуємо РЕАЛЬНИЙ залишок монет в колекції (початкова
+                        // кількість − продане − списане), а не введену при додаванні
+                        // кількість.
                         Text(
-                            "${uiState.items.sumOf { it.quantity }}",
+                            "${uiState.items.sumOf { it.remainingQuantity }}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = AccentBlue
@@ -281,12 +285,12 @@ fun MyCollectionScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(uiState.items) { item ->
+                    items(uiState.items) { wrapper ->
                         CollectionItemCard(
-                            item = item,
-                            onClick = { detailItem = item },
-                            onEdit = { viewModel.openEditDialog(item) },
-                            onDelete = { deleteCandidate = item }
+                            wrapper = wrapper,
+                            onClick = { detailItem = wrapper },
+                            onEdit = { viewModel.openEditDialog(wrapper.item) },
+                            onDelete = { deleteCandidate = wrapper }
                         )
                     }
                 }
@@ -331,8 +335,9 @@ fun MyCollectionScreen(
     }
 
     // Detail dialog
-    val detail = detailItem
-    if (detail != null) {
+    val detailWrapper = detailItem
+    if (detailWrapper != null) {
+        val detail = detailWrapper.item
         AlertDialog(
             onDismissRequest = { detailItem = null },
             title = { Text(detail.name) },
@@ -363,7 +368,28 @@ fun MyCollectionScreen(
                     InfoLine(tr("Матеріал", "Material"), detail.material)
                     InfoLine(tr("Номінал", "Nominal"), detail.nominal)
                     InfoLine(tr("Якість", "Quality"), detail.quality)
-                    InfoLine(tr("Кількість", "Quantity"), detail.quantity.toString())
+                    // Показуємо реальний залишок з розбивкою, щоб було видно і
+                    // «було додано X», і «продано Y», і «залишилось Z».
+                    InfoLine(
+                        tr("Початкова кількість", "Initial quantity"),
+                        detail.quantity.toString()
+                    )
+                    if (detailWrapper.soldQuantity > 0) {
+                        InfoLine(
+                            tr("Продано", "Sold"),
+                            detailWrapper.soldQuantity.toString()
+                        )
+                    }
+                    if (detailWrapper.writtenOffQuantity > 0) {
+                        InfoLine(
+                            tr("Списано", "Written off"),
+                            detailWrapper.writtenOffQuantity.toString()
+                        )
+                    }
+                    InfoLine(
+                        tr("Залишок", "Remaining"),
+                        detailWrapper.remainingQuantity.toString()
+                    )
                     InfoLine(tr("Оціночна вартість", "Estimated value"), "${String.format("%,.2f", detail.estimatedValue)} ₴")
                     if (detail.description.isNotEmpty()) {
                         Text(tr("Опис:", "Description:"), fontWeight = FontWeight.Medium, fontSize = 13.sp)
@@ -457,8 +483,9 @@ fun MyCollectionScreen(
     }
 
     // Delete confirmation
-    val toDelete = deleteCandidate
-    if (toDelete != null) {
+    val toDeleteWrapper = deleteCandidate
+    if (toDeleteWrapper != null) {
+        val toDelete = toDeleteWrapper.item
         AlertDialog(
             onDismissRequest = { deleteCandidate = null },
             title = { Text(tr("Видалити з колекції?", "Delete from collection?")) },
@@ -487,11 +514,12 @@ private fun InfoLine(label: String, value: String) {
 
 @Composable
 private fun CollectionItemCard(
-    item: CollectionItem,
+    wrapper: CollectionItemWithStock,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val item = wrapper.item
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -544,8 +572,16 @@ private fun CollectionItemCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
+                // Формат «Залишок: 2 з 5» — відображає реальний залишок + початкову
+                // кількість, щоб було видно скільки вже продали. Якщо нічого не
+                // продано (sold=0, writtenOff=0) — пишемо просте «Кількість: 5».
+                val remainingLine = if (wrapper.soldQuantity > 0 || wrapper.writtenOffQuantity > 0) {
+                    "${tr("Залишок", "Remaining")}: ${wrapper.remainingQuantity} ${tr("з", "of")} ${item.quantity}"
+                } else {
+                    "${tr("Кількість", "Quantity")}: ${item.quantity}"
+                }
                 Text(
-                    "${tr("Кількість", "Quantity")}: ${item.quantity} • ${String.format("%,.2f", item.estimatedValue)} ₴",
+                    "$remainingLine • ${String.format("%,.2f", item.estimatedValue)} ₴",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )

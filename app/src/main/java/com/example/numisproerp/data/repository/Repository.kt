@@ -2,6 +2,7 @@ package com.numisproerp.data.repository
 
 import com.numisproerp.data.dao.ClientForSelection
 import com.numisproerp.data.dao.ClientWithBalance
+import com.numisproerp.data.dao.CollectionItemWithStock
 import com.numisproerp.data.dao.ProductForSelection
 import com.numisproerp.data.dao.ProductInStock
 import com.numisproerp.data.dao.ProductStockInfo
@@ -373,6 +374,15 @@ class Repository @Inject constructor(
 
     fun getAllCollectionItems(): Flow<List<CollectionItem>> =
         database.collectionItemDao().getAll()
+
+    /**
+     * Повертає колекційні позиції разом з полями `soldQuantity` /
+     * `writtenOffQuantity` / `remainingQuantity`. Використовується на екрані
+     * «Моя колекція», щоб показувати РЕАЛЬНИЙ залишок (початкова кількість −
+     * продане − списане), а не статичне введене `quantity`.
+     */
+    fun getAllCollectionItemsWithStock(): Flow<List<CollectionItemWithStock>> =
+        database.collectionItemDao().getAllWithStock()
 
     suspend fun getCollectionItemById(id: String): CollectionItem? =
         withContext(Dispatchers.IO) {

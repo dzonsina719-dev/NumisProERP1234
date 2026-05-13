@@ -2,6 +2,7 @@ package com.numisproerp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.numisproerp.data.dao.CollectionItemWithStock
 import com.numisproerp.data.entities.CollectionItem
 import com.numisproerp.data.repository.Repository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,8 +25,8 @@ import javax.inject.Inject
  * `allItems` і використовуються в діалогах багатокритерійного фільтру.
  */
 data class MyCollectionUiState(
-    val allItems: List<CollectionItem> = emptyList(),
-    val items: List<CollectionItem> = emptyList(),
+    val allItems: List<CollectionItemWithStock> = emptyList(),
+    val items: List<CollectionItemWithStock> = emptyList(),
     val isLoading: Boolean = false,
     val totalEstimatedValue: Double = 0.0,
     val showAddDialog: Boolean = false,
@@ -64,14 +65,17 @@ class MyCollectionViewModel @Inject constructor(
     private fun observeCollection() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            repository.getAllCollectionItems().collectLatest { items ->
+            // Спостерігаємо версію з живими полями sold/remaining, щоб UI
+            // відображав реальний залишок (як на складі), а не введену при
+            // додаванні кількість.
+            repository.getAllCollectionItemsWithStock().collectLatest { items ->
                 _uiState.value = _uiState.value.copy(
                     allItems = items,
-                    categories = items.map { it.category }.filter { it.isNotBlank() }.distinct().sorted(),
-                    materials = items.map { it.material }.filter { it.isNotBlank() }.distinct().sorted(),
-                    qualities = items.map { it.quality }.filter { it.isNotBlank() }.distinct().sorted(),
-                    seriesList = items.map { it.series }.filter { it.isNotBlank() }.distinct().sorted(),
-                    nominals = items.map { it.nominal }.filter { it.isNotBlank() }.distinct().sorted(),
+                    categories = items.map { it.item.category }.filter { it.isNotBlank() }.distinct().sorted(),
+                    materials = items.map { it.item.material }.filter { it.isNotBlank() }.distinct().sorted(),
+                    qualities = items.map { it.item.quality }.filter { it.isNotBlank() }.distinct().sorted(),
+                    seriesList = items.map { it.item.series }.filter { it.isNotBlank() }.distinct().sorted(),
+                    nominals = items.map { it.item.nominal }.filter { it.isNotBlank() }.distinct().sorted(),
                     isLoading = false
                 )
                 applyFiltersAndSort()
@@ -84,39 +88,44 @@ class MyCollectionViewModel @Inject constructor(
         val q = s.searchQuery.trim().lowercase()
         var list = s.allItems
 
-        if (s.filterCategory.isNotEmpty()) list = list.filter { it.category == s.filterCategory }
-        if (s.filterMaterial.isNotEmpty()) list = list.filter { it.material == s.filterMaterial }
-        if (s.filterQuality.isNotEmpty()) list = list.filter { it.quality == s.filterQuality }
-        if (s.filterSeries.isNotEmpty()) list = list.filter { it.series == s.filterSeries }
-        if (s.filterNominal.isNotEmpty()) list = list.filter { it.nominal == s.filterNominal }
+        if (s.filterCategory.isNotEmpty()) list = list.filter { it.item.category == s.filterCategory }
+        if (s.filterMaterial.isNotEmpty()) list = list.filter { it.item.material == s.filterMaterial }
+        if (s.filterQuality.isNotEmpty()) list = list.filter { it.item.quality == s.filterQuality }
+        if (s.filterSeries.isNotEmpty()) list = list.filter { it.item.series == s.filterSeries }
+        if (s.filterNominal.isNotEmpty()) list = list.filter { it.item.nominal == s.filterNominal }
 
         if (q.isNotEmpty()) {
             list = list.filter {
-                it.name.lowercase().contains(q) ||
-                    it.series.lowercase().contains(q) ||
-                    it.category.lowercase().contains(q) ||
-                    it.material.lowercase().contains(q) ||
-                    it.nominal.lowercase().contains(q) ||
-                    it.quality.lowercase().contains(q) ||
-                    it.description.lowercase().contains(q)
+                it.item.name.lowercase().contains(q) ||
+                    it.item.series.lowercase().contains(q) ||
+                    it.item.category.lowercase().contains(q) ||
+                    it.item.material.lowercase().contains(q) ||
+                    it.item.nominal.lowercase().contains(q) ||
+                    it.item.quality.lowercase().contains(q) ||
+                    it.item.description.lowercase().contains(q)
             }
         }
 
         list = when (s.sortBy) {
-            "name_asc" -> list.sortedBy { it.name.lowercase() }
-            "name_desc" -> list.sortedByDescending { it.name.lowercase() }
-            "value_desc" -> list.sortedByDescending { it.estimatedValue }
-            "value_asc" -> list.sortedBy { it.estimatedValue }
-            "qty_desc" -> list.sortedByDescending { it.quantity }
-            "qty_asc" -> list.sortedBy { it.quantity }
-            "date_asc" -> list.sortedBy { it.dateAdded }
-            "date_desc" -> list.sortedByDescending { it.dateAdded }
-            "category" -> list.sortedBy { it.category.lowercase() }
-            "material" -> list.sortedBy { it.material.lowercase() }
+            "name_asc" -> list.sortedBy { it.item.name.lowercase() }
+            "name_desc" -> list.sortedByDescending { it.item.name.lowercase() }
+            "value_desc" -> list.sortedByDescending { it.item.estimatedValue }
+            "value_asc" -> list.sortedBy { it.item.estimatedValue }
+            // Сортуємо за РЕАЛЬНИМ залишком, бо саме він відображається на
+            // картках — якщо користувач бачить «Залишок: 2» і «Залишок: 5»,
+            // він очікує, що «за кількістю» відсортує саме ці числа.
+            "qty_desc" -> list.sortedByDescending { it.remainingQuantity }
+            "qty_asc" -> list.sortedBy { it.remainingQuantity }
+            "date_asc" -> list.sortedBy { it.item.dateAdded }
+            "date_desc" -> list.sortedByDescending { it.item.dateAdded }
+            "category" -> list.sortedBy { it.item.category.lowercase() }
+            "material" -> list.sortedBy { it.item.material.lowercase() }
             else -> list
         }
 
-        val total = list.sumOf { it.estimatedValue * it.quantity }
+        // Загальна оціночна вартість рахується по залишку — якщо монети вже
+        // продані, вони не повинні потрапляти в підсумок.
+        val total = list.sumOf { it.item.estimatedValue * it.remainingQuantity }
         _uiState.value = _uiState.value.copy(items = list, totalEstimatedValue = total)
     }
 
