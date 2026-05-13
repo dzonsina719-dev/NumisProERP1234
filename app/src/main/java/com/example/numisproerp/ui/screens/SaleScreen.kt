@@ -178,12 +178,22 @@ fun SaleScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 72.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(top = 72.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
             } else {
+              // Прокручуваний блок: пошук клієнта, кошик, підсумок.
+              // Кнопка «Провести продаж» залишається ПОЗА цим блоком (нижче),
+              // щоб не зникала з екрана, коли вміст не вміщується (раніше була
+              // скарга: на деяких клієнтах + товарах кнопка опинялась за межами
+              // екрана і не була доступна).
+              Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
                 // Пошук клієнта
                 OutlinedTextField(
                     value = uiState.clientSearchQuery,
@@ -311,7 +321,9 @@ fun SaleScreen(
                     }
                 }
 
-                // Кошик
+                // Кошик. Без вкладеного LazyColumn — інакше конфліктує з
+                // верхнім verticalScroll. Звичайна Column з .forEach справляється
+                // (товарів у кошику зазвичай одиниці).
                 if (cartItems.isEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -327,11 +339,11 @@ fun SaleScreen(
                         )
                     }
                 } else {
-                    LazyColumn(
+                    Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.height(200.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(cartItems) { item ->
+                        cartItems.forEach { item ->
                             SaleCartItemCard(
                                 item = item,
                                 onRemove = {
@@ -388,6 +400,8 @@ fun SaleScreen(
                         }
                     }
                 }
+
+              } // закриття прокручуваної Column
 
                 Spacer(modifier = Modifier.height(8.dp))
 
