@@ -1,6 +1,7 @@
 package com.numisproerp.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,13 +12,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DisplayMode
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +44,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Запис історії, незалежний від типу: дата, кількість, сума, ім'я товару.
@@ -271,13 +271,15 @@ fun DayGroupCard(
 }
 
 /**
- * Material3 Compose DatePicker у власному діалозі. Дозволяє вибрати **будь-яку**
- * дату (минулу або майбутню) — діапазон років `1900..2100`. На відміну від
- * native `android.app.DatePickerDialog`, що на деяких прошивках падає у
- * спіннер-режим з обмеженим вибором.
+ * Діалог вибору дати з трьома випадаючими списками (Рік / Місяць / День).
  *
- * Час повертається у мс **локального часового поясу** (00:00 цього дня).
- * Подальша нормалізація (startOfDay/endOfDay) робиться у викликаючому коді.
+ * Дозволяє вільно вибрати будь-який день в діапазоні 1900..2100, включно з
+ * майбутніми роками. На відміну від Material3 `DatePicker`, цей підхід не
+ * страждає від проблем з перехопленням кліків у scrollable-контейнерах і від native
+ * Android `DatePickerDialog`, який на деяких прошивках обмежує вибір року.
+ *
+ * Повертає мс локального часового поясу (00:00 вибраного дня). Нормалізація
+ * `startOfDay`/`endOfDay` робиться у викликаючому коді.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -286,33 +288,154 @@ private fun DateChooserDialog(
     onDismiss: () -> Unit,
     onConfirm: (Long) -> Unit
 ) {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialMillis ?: System.currentTimeMillis(),
-        yearRange = 1900..2100,
-        initialDisplayMode = DisplayMode.Picker
+    val today = remember { Calendar.getInstance() }
+    val initial = remember(initialMillis) {
+        Calendar.getInstance().apply {
+            if (initialMillis != null) timeInMillis = initialMillis
+        }
+    }
+    var year by remember { mutableStateOf(initial.get(Calendar.YEAR)) }
+    var month by remember { mutableStateOf(initial.get(Calendar.MONTH)) } // 0..11
+    var day by remember { mutableStateOf(initial.get(Calendar.DAY_OF_MONTH)) }
+
+    // Максимальний день в місяці — залежить від вибраного року/місяця.
+    val maxDay = remember(year, month) {
+        Calendar.getInstance().apply {
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month)
+            set(Calendar.DAY_OF_MONTH, 1)
+        }.getActualMaximum(Calendar.DAY_OF_MONTH)
+    }
+    // Якщо день виходить за межі після зміни місяця — обрізаємо.
+    if (day > maxDay) day = maxDay
+
+    val monthNames = listOf(
+        tr("Січень", "January"), tr("Лютий", "February"), tr("Березень", "March"),
+        tr("Квітень", "April"), tr("Травень", "May"), tr("Червень", "June"),
+        tr("Липень", "July"), tr("Серпень", "August"), tr("Вересень", "September"),
+        tr("Жовтень", "October"), tr("Листопад", "November"), tr("Грудень", "December")
     )
-    DatePickerDialog(
+    val years = remember { (1900..2100).toList() }
+
+    AlertDialog(
         onDismissRequest = onDismiss,
+        title = { Text(tr("Виберіть дату", "Pick a date")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Рік
+                    PickerDropdown(
+                        modifier = Modifier.weight(1f),
+                        label = tr("Рік", "Year"),
+                        value = year.toString(),
+                        items = years.map { it.toString() to it },
+                        onSelect = { year = it }
+                    )
+                    // Місяць
+                    PickerDropdown(
+                        modifier = Modifier.weight(1.2f),
+                        label = tr("Місяць", "Month"),
+                        value = monthNames[month],
+                        items = monthNames.mapIndexed { idx, n -> n to idx },
+                        onSelect = { month = it }
+                    )
+                    // День
+                    PickerDropdown(
+                        modifier = Modifier.weight(0.8f),
+                        label = tr("День", "Day"),
+                        value = day.toString(),
+                        items = (1..maxDay).map { it.toString() to it },
+                        onSelect = { day = it }
+                    )
+                }
+                // Кнопка «Сьогодні» для швидкого вибору
+                TextButton(onClick = {
+                    year = today.get(Calendar.YEAR)
+                    month = today.get(Calendar.MONTH)
+                    day = today.get(Calendar.DAY_OF_MONTH)
+                }) {
+                    Text(tr("Сьогодні", "Today"))
+                }
+            }
+        },
         confirmButton = {
             TextButton(onClick = {
-                val utc = state.selectedDateMillis
-                if (utc != null) {
-                    // Material3 повертає UTC-мс ОБРАНОЇ КАЛЕНДАРНОЇ ДАТИ (00:00 UTC).
-                    // Конвертуємо у мс локального часового поясу того ж дня,
-                    // щоб `startOfDay`/`endOfDay` коректно його зрізали.
-                    val tz = TimeZone.getDefault()
-                    val local = utc - tz.getOffset(utc)
-                    onConfirm(local)
-                } else {
-                    onDismiss()
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, day)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }
+                onConfirm(cal.timeInMillis)
             }) { Text(tr("Готово", "OK")) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(tr("Скасувати", "Cancel")) }
         }
-    ) {
-        DatePicker(state = state)
+    )
+}
+
+/**
+ * Випадаючий список-пікер для одного поля дати (рік / місяць / день).
+ * Проста OutlinedButton + DropdownMenu — працює на всіх пристроях без проблем
+ * з перехопленням жестів у батьківських scrollable-контейнерах.
+ */
+@Composable
+private fun <T> PickerDropdown(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    items: List<Pair<String, T>>,
+    onSelect: (T) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(IOSDesign.ButtonCornerRadius)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1
+                )
+                Text(
+                    text = value,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
+                )
+            }
+            Icon(
+                Icons.Default.ArrowDropDown,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.height(280.dp)
+        ) {
+            items.forEach { (text, payload) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        onSelect(payload)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 
