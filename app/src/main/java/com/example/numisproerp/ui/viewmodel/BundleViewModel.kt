@@ -272,4 +272,15 @@ class BundleViewModel @Inject constructor(
             bundleDao.deleteBundle(bundleId)
         }
     }
+
+    /**
+     * Розібрати збірку назад на компоненти. Атомарно видаляє «слід» збірки в
+     * БД (Purchase + всі Writeoff + Bundle + BundleComponent + Product),
+     * через що SQL-розрахунок залишку повертає компоненти на склад.
+     *
+     * Якщо збірка вже частково/повністю продана — повертає
+     * [Repository.DisassembleResult.AlreadySold], нічого не змінює.
+     */
+    suspend fun disassembleBundle(bundleId: String): Repository.DisassembleResult =
+        repository.disassembleBundleAtomically(bundleId)
 }

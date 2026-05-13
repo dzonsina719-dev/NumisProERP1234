@@ -9,6 +9,12 @@ import androidx.room.PrimaryKey
  * `pricePerUnit` — це **закупочна** ціна на момент списання (середня по
  * залишку), а `totalAmount = quantity * pricePerUnit`. Списання впливає на
  * залишки на складі (мінусує кількість) та враховується як витрата у звітах.
+ *
+ * `isBundleOp` = true означає, що це **внутрішнє** списання компонента при
+ * збірці лоту в «Моя збірка», а не реальна втрата товару. Такий запис
+ * впливає на залишок (компонент пропадає зі складу), але **виключається** з
+ * історії списань та зі звітів про витрати — це не збиток, а перетворення
+ * у готовий лот.
  */
 @Entity(tableName = "writeoffs")
 data class Writeoff(
@@ -20,5 +26,6 @@ data class Writeoff(
     val pricePerUnit: Double,
     val totalAmount: Double,
     val reason: String,
-    val comment: String
+    val comment: String,
+    val isBundleOp: Boolean = false
 )
